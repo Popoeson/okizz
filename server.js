@@ -66,6 +66,20 @@ const artisteSchema = new mongoose.Schema(
 const Artiste = mongoose.model("Artiste", artisteSchema);
 
 /* =====================
+   HERO SCHEMA
+===================== */
+const heroSchema = new mongoose.Schema(
+  {
+    image: String,
+    active: { type: Boolean, default: false }
+  },
+  { timestamps: true }
+);
+
+const Hero = mongoose.model("Hero", heroSchema);
+
+
+/* =====================
    ROUTES
 ===================== */
 
@@ -178,6 +192,111 @@ app.put("/api/artistes/:id", upload.single("image"), async (req,res)=>{
   const artiste = await Artiste.findByIdAndUpdate(req.params.id, updateData, { new: true });
   res.json(artiste);
 });
+
+
+/* =====================
+   HERO ROUTES
+===================== */
+const heroRouter = express.Router();
+const heroUpload = upload.single("image");
+
+// GET all hero images
+heroRouter.get("/", async (req, res) => {
+  try {
+    const heroes = await Hero.find().sort({ createdAt: -1 });
+    res.json(heroes);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to fetch hero images" });
+  }
+});
+
+// GET single hero by ID
+heroRouter.get("/:id", async (req, res) => {
+  try {
+    const hero = await Hero.findById(req.params.id);
+    if (!hero) return res.status(404).json({ error: "Hero not found" });
+    res.json(hero);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to fetch hero" });
+  }
+});
+
+// CREATE new hero image
+heroRouter.post("/", heroUpload, async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "Image required" });
+
+    const uploadRes = await cloudinary.uploader.upload(
+      `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`,
+      { folder: "concert_hero" }
+    );
+
+    const hero = new Hero({ image: uploadRes.secure_url });
+    await hero.save();
+    res.status(201).json(hero);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to create hero image" });
+  }
+});
+
+// UPDATE hero image (replace)
+heroRouter.put("/:id", heroUpload, async (req, res) => {
+  try {
+    const hero = await Hero.findById(req.params.id);
+    if (!hero) return res.status(404).json({ error: "Hero not found" });
+
+    if (req.file) {
+      const uploadRes = await cloudinary.uploader.upload(
+        `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`,
+        { folder: "concert_hero" }
+      );
+      hero.image = uploadRes.secure_url;
+    }
+
+    await hero.save();
+    res.json(hero);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to update hero image" });
+  }
+});
+
+// DELETE hero image
+heroRouter.delete("/:id", async (req, res) => {
+  try {
+    await Hero.findByIdAndDelete(req.params.id);
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to delete hero image" });
+  }
+});
+
+// TOGGLE hero activation
+heroRouter.patch("/:id/toggle", async (req, res) => {
+  try {
+    const hero = await Hero.findById(req.params.id);
+    if (!hero) return res.status(404).json({ error: "Hero not found" });
+
+    // If activating, optionally deactivate others
+    if (!hero.active) {
+      await Hero.updateMany({}, { active: false });
+    }
+
+    hero.active = !hero.active;
+    await hero.save();
+    res.json(hero);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to toggle hero" });
+  }
+});
+
+// Mount heroRouter
+app.use("/api/hero", heroRouter);
 
 /* =====================
    SERVER
