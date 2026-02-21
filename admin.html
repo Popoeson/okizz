@@ -292,34 +292,148 @@ tr:not(:last-child){border-bottom:1px solid rgba(0,0,0,.08)}
 </div>
 
 <script>
-const sidebar=document.getElementById("sidebar");
-const modal=document.getElementById("modal");
-let mode="ticket";
+const API_BASE = "https://your-backend-url.onrender.com"; // CHANGE THIS
 
+const sidebar = document.getElementById("sidebar");
+const modal = document.getElementById("modal");
+const ticketsTable = document.getElementById("ticketsTable");
+const ordersTable = document.getElementById("ordersTable");
+
+let mode = "ticket";
+let currentEventId = null;
+
+/* =====================
+   UI CONTROLS
+===================== */
 function toggleSidebar(){
   sidebar.classList.toggle("show");
   overlay.classList.toggle("show");
 }
 
-function showPage(id,el){
+function showPage(id, el){
   document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
   document.getElementById(id).classList.add("active");
   document.querySelectorAll(".sidebar li").forEach(l=>l.classList.remove("active"));
   el.classList.add("active");
   toggleSidebar();
+
+  if(id === "dashboard") loadDashboard();
+  if(id === "tickets") loadTickets();
+  if(id === "orders") loadOrders();
 }
 
 function openModal(type){
-  mode=type;
-  modal.style.display="flex";
-  modalTitle.innerText=type==="ticket"?"Add Ticket":"Add Artiste";
+  mode = type;
+  modal.style.display = "flex";
+  modalTitle.innerText = type === "ticket" ? "Add Ticket" : "Add Artiste";
 }
-function closeModal(){modal.style.display="none"}
 
-function save(){
-  alert(`${mode} saved (connect backend)`);
-  closeModal();
+function closeModal(){
+  modal.style.display = "none";
 }
+
+/* =====================
+   DASHBOARD
+===================== */
+async function loadDashboard(){
+  const res = await fetch(`${API_BASE}/api/orders`);
+  const orders = await res.json();
+
+  let revenue = 0;
+  orders.forEach(o => revenue += o.amount);
+
+  document.getElementById("rev").innerText = `₦${revenue.toLocaleString()}`;
+  document.getElementById("ordersCount").innerText = orders.length;
+
+  const avg = orders.length ? revenue / orders.length : 0;
+  document.getElementById("avg").innerText = `₦${avg.toFixed(0)}`;
+}
+
+/* =====================
+   TICKETS
+===================== */
+async function loadTickets(){
+  ticketsTable.innerHTML = "";
+
+  // Fetch first event (single concert assumption)
+  const evRes = await fetch(`${API_BASE}/api/events`);
+  const events = await evRes.json();
+  if(!events.length) return;
+
+  currentEventId = events[0]._id;
+
+  const res = await fetch(`${API_BASE}/api/tickets/${currentEventId}`);
+  const tickets = await res.json();
+
+  tickets.forEach(t => {
+    ticketsTable.innerHTML += `
+      <tr>
+        <td>🎟</td>
+        <td>${t.name}</td>
+        <td>${t.available} left</td>
+        <td>₦${t.price.toLocaleString()}</td>
+        <td>-</td>
+      </tr>
+    `;
+  });
+
+  document.getElementById("ticketCount").innerText = tickets.length;
+}
+
+/* =====================
+   ORDERS
+===================== */
+async function loadOrders(){
+  ordersTable.innerHTML = "";
+
+  const res = await fetch(`${API_BASE}/api/orders`);
+  const orders = await res.json();
+
+  orders.forEach(o => {
+    ordersTable.innerHTML += `
+      <tr>
+        <td>${o.orderId}</td>
+        <td>${o.buyer.name}<br><small>${o.buyer.email}</small></td>
+        <td>${o.ticketType}</td>
+        <td>₦${o.amount.toLocaleString()}</td>
+      </tr>
+    `;
+  });
+}
+
+/* =====================
+   SAVE TICKET
+===================== */
+async function save(){
+  if(mode !== "ticket") return closeModal();
+
+  const name = document.getElementById("name").value;
+  const price = document.getElementById("price").value;
+
+  if(!name || !price){
+    alert("Fill required fields");
+    return;
+  }
+
+  await fetch(`${API_BASE}/api/tickets`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      eventId: currentEventId,
+      name,
+      price,
+      available: 100
+    })
+  });
+
+  closeModal();
+  loadTickets();
+}
+
+/* =====================
+   INIT
+===================== */
+loadDashboard();
 </script>
 
 </body>
