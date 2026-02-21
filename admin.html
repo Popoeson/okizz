@@ -240,8 +240,24 @@ tr:not(:last-child){border-bottom:1px solid rgba(0,0,0,.08)}
 
 <script>
 const API_BASE = "https://okizz.onrender.com";
+
+// DOM Elements
 const sidebar = document.getElementById("sidebar");
 const overlay = document.getElementById("overlay");
+const ticketsTable = document.getElementById("ticketsTable");
+const ordersTable = document.getElementById("ordersTable");
+const artistsTable = document.getElementById("artistsTable");
+
+// Modal elements
+const ticketModal = document.getElementById("ticketModal");
+const ticketName = document.getElementById("ticketName");
+const ticketDescription = document.getElementById("ticketDescription");
+const ticketPrice = document.getElementById("ticketPrice");
+const ticketImage = document.getElementById("ticketImage");
+
+const artistModal = document.getElementById("artistModal");
+const artistName = document.getElementById("artistName");
+const artistImage = document.getElementById("artistImage");
 
 /* =====================
    SIDEBAR
@@ -270,10 +286,8 @@ function showPage(id, el){
 async function loadDashboard(){
   const res = await fetch(`${API_BASE}/api/orders`);
   const orders = await res.json();
-
   let revenue = 0;
   orders.forEach(o => revenue += o.amount);
-
   document.getElementById("rev").innerText = `₦${revenue.toLocaleString()}`;
   document.getElementById("ordersCount").innerText = orders.length;
   document.getElementById("avg").innerText =
@@ -286,9 +300,7 @@ async function loadDashboard(){
 async function loadTickets(){
   const res = await fetch(`${API_BASE}/api/tickets`);
   const tickets = await res.json();
-
   ticketsTable.innerHTML = "";
-
   tickets.forEach(t=>{
     ticketsTable.innerHTML += `
       <tr>
@@ -299,7 +311,6 @@ async function loadTickets(){
       </tr>
     `;
   });
-
   document.getElementById("ticketCount").innerText = tickets.length;
 }
 
@@ -309,9 +320,7 @@ async function loadTickets(){
 async function loadOrders(){
   const res = await fetch(`${API_BASE}/api/orders`);
   const orders = await res.json();
-
   ordersTable.innerHTML = "";
-
   orders.forEach(o=>{
     ordersTable.innerHTML += `
       <tr>
@@ -352,9 +361,9 @@ async function saveTicket(){
     body: fd
   });
 
-  const data = await res.json();
   if(!res.ok){
-    alert(data.error);
+    const data = await res.json();
+    alert(data.error || "Failed to save ticket");
     return;
   }
 
@@ -367,8 +376,12 @@ async function saveTicket(){
 ===================== */
 async function loadArtists(){
   const res = await fetch(`${API_BASE}/api/artistes`);
-  const artistes = await res.json();
+  if(!res.ok){
+    console.error("Failed to fetch artistes", await res.text());
+    return;
+  }
 
+  const artistes = await res.json();
   artistsTable.innerHTML = "";
 
   artistes.forEach(a=>{
@@ -400,21 +413,26 @@ async function saveArtist(){
   fd.append("name", name);
   fd.append("image", image);
 
-  const res = await fetch(`${API_BASE}/api/artistes`, {
-    method: "POST",
-    body: fd
-  });
+  try{
+    const res = await fetch(`${API_BASE}/api/artistes`, {
+      method: "POST",
+      body: fd
+    });
 
-  if(!res.ok){
-    const text = await res.text();
-    console.error("Server response:", text);
-    alert("Failed to save artiste. Check backend.");
-    return;
+    if(!res.ok){
+      const text = await res.text();
+      console.error("Server response:", text);
+      alert("Failed to save artiste. Check backend.");
+      return;
+    }
+
+    const data = await res.json();
+    closeArtistModal();
+    loadArtists();
+  }catch(err){
+    console.error("Network error:", err);
+    alert("Failed to save artiste. Check console.");
   }
-
-  const data = await res.json();
-  closeArtistModal();
-  loadArtists();
 }
 
 /* =====================
