@@ -243,98 +243,181 @@ const API_BASE = "https://okizz.onrender.com";
 const sidebar = document.getElementById("sidebar");
 const overlay = document.getElementById("overlay");
 
+/* =====================
+   SIDEBAR
+===================== */
 function toggleSidebar(){
   sidebar.classList.toggle("show");
   overlay.classList.toggle("show");
 }
+
 function showPage(id, el){
   document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
   document.getElementById(id).classList.add("active");
   document.querySelectorAll(".sidebar li").forEach(l=>l.classList.remove("active"));
   el.classList.add("active");
   toggleSidebar();
+
   if(id==="tickets") loadTickets();
+  if(id==="artists") loadArtists();
   if(id==="orders") loadOrders();
   if(id==="dashboard") loadDashboard();
 }
 
-/* DASHBOARD */
+/* =====================
+   DASHBOARD
+===================== */
 async function loadDashboard(){
   const res = await fetch(`${API_BASE}/api/orders`);
   const orders = await res.json();
+
   let revenue = 0;
-  orders.forEach(o=>revenue+=o.amount);
+  orders.forEach(o => revenue += o.amount);
+
   document.getElementById("rev").innerText = `₦${revenue.toLocaleString()}`;
   document.getElementById("ordersCount").innerText = orders.length;
   document.getElementById("avg").innerText =
-    `₦${orders.length ? (revenue/orders.length).toFixed(0) : 0}`;
+    `₦${orders.length ? (revenue / orders.length).toFixed(0) : 0}`;
 }
 
-/* TICKETS */
+/* =====================
+   TICKETS
+===================== */
 async function loadTickets(){
   const res = await fetch(`${API_BASE}/api/tickets`);
   const tickets = await res.json();
-  ticketsTable.innerHTML="";
+
+  ticketsTable.innerHTML = "";
+
   tickets.forEach(t=>{
-    ticketsTable.innerHTML+=`
+    ticketsTable.innerHTML += `
       <tr>
         <td><img src="${t.image}" style="width:40px;border-radius:8px"></td>
         <td>${t.name}</td>
         <td>${t.description}</td>
         <td>₦${t.price.toLocaleString()}</td>
-      </tr>`;
+      </tr>
+    `;
   });
+
   document.getElementById("ticketCount").innerText = tickets.length;
 }
 
-/* ORDERS */
+/* =====================
+   ORDERS
+===================== */
 async function loadOrders(){
   const res = await fetch(`${API_BASE}/api/orders`);
   const orders = await res.json();
-  ordersTable.innerHTML="";
+
+  ordersTable.innerHTML = "";
+
   orders.forEach(o=>{
-    ordersTable.innerHTML+=`
+    ordersTable.innerHTML += `
       <tr>
         <td>${o.orderId}</td>
         <td>${o.buyer.name}<br><small>${o.buyer.email}</small></td>
         <td>${o.ticketType}</td>
         <td>₦${o.amount.toLocaleString()}</td>
-      </tr>`;
+      </tr>
+    `;
   });
 }
 
-/* TICKET MODAL */
-function openTicketModal(){ticketModal.style.display="flex"}
-function closeTicketModal(){ticketModal.style.display="none"}
+/* =====================
+   TICKET MODAL
+===================== */
+function openTicketModal(){ ticketModal.style.display = "flex"; }
+function closeTicketModal(){ ticketModal.style.display = "none"; }
 
 async function saveTicket(){
-  const name=ticketName.value.trim();
-  const description=ticketDescription.value.trim();
-  const price=ticketPrice.value;
-  const image=ticketImage.files[0];
+  const name = ticketName.value.trim();
+  const description = ticketDescription.value.trim();
+  const price = ticketPrice.value;
+  const image = ticketImage.files[0];
 
-  if(!name||!description||!price||!image){
-    alert("All fields required");return;
+  if(!name || !description || !price || !image){
+    alert("All fields required");
+    return;
   }
 
-  const fd=new FormData();
-  fd.append("name",name);
-  fd.append("description",description);
-  fd.append("price",price);
-  fd.append("image",image);
+  const fd = new FormData();
+  fd.append("name", name);
+  fd.append("description", description);
+  fd.append("price", price);
+  fd.append("image", image);
 
-  const res=await fetch(`${API_BASE}/api/tickets`,{method:"POST",body:fd});
-  const data=await res.json();
-  if(!res.ok){alert(data.error);return;}
+  const res = await fetch(`${API_BASE}/api/tickets`, {
+    method: "POST",
+    body: fd
+  });
+
+  const data = await res.json();
+  if(!res.ok){
+    alert(data.error);
+    return;
+  }
 
   closeTicketModal();
   loadTickets();
 }
 
-/* ARTIST MODAL */
-function openArtistModal(){artistModal.style.display="flex"}
-function closeArtistModal(){artistModal.style.display="none"}
+/* =====================
+   ARTISTES
+===================== */
+async function loadArtists(){
+  const res = await fetch(`${API_BASE}/api/artistes`);
+  const artistes = await res.json();
 
+  artistsTable.innerHTML = "";
+
+  artistes.forEach(a=>{
+    artistsTable.innerHTML += `
+      <tr>
+        <td><img src="${a.image}" style="width:40px;border-radius:50%"></td>
+        <td>${a.name}</td>
+      </tr>
+    `;
+  });
+}
+
+/* =====================
+   ARTIST MODAL
+===================== */
+function openArtistModal(){ artistModal.style.display = "flex"; }
+function closeArtistModal(){ artistModal.style.display = "none"; }
+
+async function saveArtist(){
+  const name = artistName.value.trim();
+  const image = artistImage.files[0];
+
+  if(!name || !image){
+    alert("Name and image required");
+    return;
+  }
+
+  const fd = new FormData();
+  fd.append("name", name);
+  fd.append("image", image);
+
+  const res = await fetch(`${API_BASE}/api/artistes`, {
+    method: "POST",
+    body: fd
+  });
+
+  const data = await res.json();
+  if(!res.ok){
+    alert(data.error);
+    return;
+  }
+
+  closeArtistModal();
+  loadArtists();
+}
+
+/* =====================
+   INIT
+===================== */
 loadDashboard();
 </script>
 
