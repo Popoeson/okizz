@@ -151,6 +151,34 @@ app.delete("/api/artistes/:id", async (req, res) => {
   res.json({ success: true });
 });
 
+// Update Ticket
+app.put("/api/tickets/:id", upload.single("image"), async (req,res)=>{
+  const { name, description, price } = req.body;
+  let updateData = { name, description, price };
+
+  if(req.file){
+    const uploadRes = await cloudinary.uploader.upload(`data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`, { folder: "concert_tickets" });
+    updateData.image = uploadRes.secure_url;
+  }
+
+  const ticket = await Ticket.findByIdAndUpdate(req.params.id, updateData, { new: true });
+  res.json(ticket);
+});
+
+// Update Artiste
+app.put("/api/artistes/:id", upload.single("image"), async (req,res)=>{
+  const { name } = req.body;
+  let updateData = { name };
+
+  if(req.file){
+    const uploadRes = await cloudinary.uploader.upload(`data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`, { folder: "concert_artistes" });
+    updateData.image = uploadRes.secure_url;
+  }
+
+  const artiste = await Artiste.findByIdAndUpdate(req.params.id, updateData, { new: true });
+  res.json(artiste);
+});
+
 /* =====================
    SERVER
 ===================== */
