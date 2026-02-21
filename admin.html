@@ -365,17 +365,19 @@ async function loadTickets(){
   const res = await fetch(`${API_BASE}/api/tickets/${currentEventId}`);
   const tickets = await res.json();
 
-  tickets.forEach(t => {
-    ticketsTable.innerHTML += `
-      <tr>
-        <td>🎟</td>
-        <td>${t.name}</td>
-        <td>${t.available} left</td>
-        <td>₦${t.price.toLocaleString()}</td>
-        <td>-</td>
-      </tr>
-    `;
-  });
+tickets.forEach(t => {
+  ticketsTable.innerHTML += `
+    <tr>
+      <td>
+        ${t.image ? `<img src="${t.image}" style="width:40px;border-radius:8px">` : "🎟"}
+      </td>
+      <td>${t.name}</td>
+      <td>${t.description || `${t.available} left`}</td>
+      <td>₦${t.price.toLocaleString()}</td>
+      <td>-</td>
+    </tr>
+  `;
+});
 
   document.getElementById("ticketCount").innerText = tickets.length;
 }
