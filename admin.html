@@ -179,13 +179,13 @@ tr:not(:last-child){border-bottom:1px solid rgba(0,0,0,.08)}
     </table>
   </div>
 </section>
-
 <!-- ARTISTS -->
 <section id="artists" class="page">
   <div style="display:flex;justify-content:space-between;margin-bottom:18px">
     <h3>Artistes</h3>
     <button class="btn" onclick="openArtistModal()">+ Add Artiste</button>
   </div>
+
   <div class="glass table-wrapper">
     <table>
       <thead>
@@ -194,7 +194,20 @@ tr:not(:last-child){border-bottom:1px solid rgba(0,0,0,.08)}
       <tbody id="artistsTable"></tbody>
     </table>
   </div>
+
+  <!-- ARTIST MODAL -->
+  <div class="modal" id="artistModal">
+    <div class="modal-content glass">
+      <h3>Add Artiste</h3>
+      <input id="artistName" placeholder="Artiste Name">
+      <input id="artistImage" type="file">
+      <!-- Fixed: add onclick handler to trigger saveArtist() -->
+      <button class="btn" onclick="saveArtist()">Save</button>
+      <button class="btn" style="background:#ccc;color:#333" onclick="closeArtistModal()">Cancel</button>
+    </div>
+  </div>
 </section>
+
 
 <!-- ORDERS -->
 <section id="orders" class="page glass table-wrapper">
@@ -224,17 +237,6 @@ tr:not(:last-child){border-bottom:1px solid rgba(0,0,0,.08)}
     <input id="ticketImage" type="file">
     <button class="btn" onclick="saveTicket()">Save</button>
     <button class="btn" style="background:#ccc;color:#333" onclick="closeTicketModal()">Cancel</button>
-  </div>
-</div>
-
-<!-- ARTIST MODAL -->
-<div class="modal" id="artistModal">
-  <div class="modal-content glass">
-    <h3>Add Artiste</h3>
-    <input id="artistName" placeholder="Artiste Name">
-    <input id="artistImage" type="file">
-    <button class="btn">Save</button>
-    <button class="btn" style="background:#ccc;color:#333" onclick="closeArtistModal()">Cancel</button>
   </div>
 </div>
 
