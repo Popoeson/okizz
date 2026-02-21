@@ -173,12 +173,27 @@ tr:not(:last-child){border-bottom:1px solid rgba(0,0,0,.08)}
           <th>Name</th>
           <th>Description</th>
           <th>Price</th>
+          <th>Actions</th>
         </tr>
       </thead>
       <tbody id="ticketsTable"></tbody>
     </table>
   </div>
+
+  <!-- TICKET MODAL -->
+  <div class="modal" id="ticketModal">
+    <div class="modal-content glass">
+      <h3 id="ticketModalTitle">Add Ticket</h3>
+      <input id="ticketName" placeholder="Ticket Name">
+      <textarea id="ticketDescription" placeholder="Description"></textarea>
+      <input id="ticketPrice" type="number" placeholder="Price">
+      <input id="ticketImage" type="file">
+      <button class="btn" onclick="saveTicket()">Save</button>
+      <button class="btn" style="background:#ccc;color:#333" onclick="closeTicketModal()">Cancel</button>
+    </div>
+  </div>
 </section>
+
 <!-- ARTISTS -->
 <section id="artists" class="page">
   <div style="display:flex;justify-content:space-between;margin-bottom:18px">
@@ -189,7 +204,11 @@ tr:not(:last-child){border-bottom:1px solid rgba(0,0,0,.08)}
   <div class="glass table-wrapper">
     <table>
       <thead>
-        <tr><th>Image</th><th>Name</th></tr>
+        <tr>
+          <th>Image</th>
+          <th>Name</th>
+          <th>Actions</th>
+        </tr>
       </thead>
       <tbody id="artistsTable"></tbody>
     </table>
@@ -198,16 +217,14 @@ tr:not(:last-child){border-bottom:1px solid rgba(0,0,0,.08)}
   <!-- ARTIST MODAL -->
   <div class="modal" id="artistModal">
     <div class="modal-content glass">
-      <h3>Add Artiste</h3>
+      <h3 id="artistModalTitle">Add Artiste</h3>
       <input id="artistName" placeholder="Artiste Name">
       <input id="artistImage" type="file">
-      <!-- Fixed: add onclick handler to trigger saveArtist() -->
       <button class="btn" onclick="saveArtist()">Save</button>
       <button class="btn" style="background:#ccc;color:#333" onclick="closeArtistModal()">Cancel</button>
     </div>
   </div>
 </section>
-
 
 <!-- ORDERS -->
 <section id="orders" class="page glass table-wrapper">
@@ -227,19 +244,6 @@ tr:not(:last-child){border-bottom:1px solid rgba(0,0,0,.08)}
 </main>
 </div>
 
-<!-- TICKET MODAL -->
-<div class="modal" id="ticketModal">
-  <div class="modal-content glass">
-    <h3>Add Ticket</h3>
-    <input id="ticketName" placeholder="Ticket Name">
-    <textarea id="ticketDescription" placeholder="Description"></textarea>
-    <input id="ticketPrice" type="number" placeholder="Price">
-    <input id="ticketImage" type="file">
-    <button class="btn" onclick="saveTicket()">Save</button>
-    <button class="btn" style="background:#ccc;color:#333" onclick="closeTicketModal()">Cancel</button>
-  </div>
-</div>
-
 <script>
 const API_BASE = "https://okizz.onrender.com";
 
@@ -252,14 +256,20 @@ const artistsTable = document.getElementById("artistsTable");
 
 // Modal elements
 const ticketModal = document.getElementById("ticketModal");
+const ticketModalTitle = document.getElementById("ticketModalTitle");
 const ticketName = document.getElementById("ticketName");
 const ticketDescription = document.getElementById("ticketDescription");
 const ticketPrice = document.getElementById("ticketPrice");
 const ticketImage = document.getElementById("ticketImage");
 
 const artistModal = document.getElementById("artistModal");
+const artistModalTitle = document.getElementById("artistModalTitle");
 const artistName = document.getElementById("artistName");
 const artistImage = document.getElementById("artistImage");
+
+// STATE
+let editingTicketId = null;
+let editingArtistId = null;
 
 /* =====================
    SIDEBAR
@@ -310,36 +320,29 @@ async function loadTickets(){
         <td>${t.name}</td>
         <td>${t.description}</td>
         <td>₦${t.price.toLocaleString()}</td>
+        <td>
+          <button class="btn" onclick="editTicket('${t._id}')">Edit</button>
+          <button class="btn" style="background:#e74c3c" onclick="deleteTicket('${t._id}')">Delete</button>
+        </td>
       </tr>
     `;
   });
   document.getElementById("ticketCount").innerText = tickets.length;
 }
 
-/* =====================
-   ORDERS
-===================== */
-async function loadOrders(){
-  const res = await fetch(`${API_BASE}/api/orders`);
-  const orders = await res.json();
-  ordersTable.innerHTML = "";
-  orders.forEach(o=>{
-    ordersTable.innerHTML += `
-      <tr>
-        <td>${o.orderId}</td>
-        <td>${o.buyer.name}<br><small>${o.buyer.email}</small></td>
-        <td>${o.ticketType}</td>
-        <td>₦${o.amount.toLocaleString()}</td>
-      </tr>
-    `;
-  });
+function openTicketModal(){
+  ticketModalTitle.innerText = editingTicketId ? "Edit Ticket" : "Add Ticket";
+  ticketModal.style.display = "flex";
 }
 
-/* =====================
-   TICKET MODAL
-===================== */
-function openTicketModal(){ ticketModal.style.display = "flex"; }
-function closeTicketModal(){ ticketModal.style.display = "none"; }
+function closeTicketModal(){
+  editingTicketId = null;
+  ticketName.value = "";
+  ticketDescription.value = "";
+  ticketPrice.value = "";
+  ticketImage.value = "";
+  ticketModal.style.display = "none";
+}
 
 async function saveTicket(){
   const name = ticketName.value.trim();
@@ -347,8 +350,8 @@ async function saveTicket(){
   const price = ticketPrice.value;
   const image = ticketImage.files[0];
 
-  if(!name || !description || !price || !image){
-    alert("All fields required");
+  if(!name || !description || !price){
+    alert("Name, description, and price are required");
     return;
   }
 
@@ -356,20 +359,40 @@ async function saveTicket(){
   fd.append("name", name);
   fd.append("description", description);
   fd.append("price", price);
-  fd.append("image", image);
+  if(image) fd.append("image", image);
 
-  const res = await fetch(`${API_BASE}/api/tickets`, {
-    method: "POST",
-    body: fd
-  });
+  try{
+    const url = editingTicketId ? `${API_BASE}/api/tickets/${editingTicketId}` : `${API_BASE}/api/tickets`;
+    const method = editingTicketId ? "PUT" : "POST";
 
-  if(!res.ok){
-    const data = await res.json();
-    alert(data.error || "Failed to save ticket");
-    return;
+    const res = await fetch(url, { method, body: fd });
+    if(!res.ok){
+      const data = await res.json();
+      alert(data.error || "Failed to save ticket");
+      return;
+    }
+    closeTicketModal();
+    loadTickets();
+  }catch(err){
+    console.error(err);
+    alert("Error saving ticket");
   }
+}
 
-  closeTicketModal();
+async function editTicket(id){
+  editingTicketId = id;
+  const res = await fetch(`${API_BASE}/api/tickets/${id}`);
+  const data = await res.json();
+  ticketName.value = data.name;
+  ticketDescription.value = data.description;
+  ticketPrice.value = data.price;
+  ticketImage.value = "";
+  openTicketModal();
+}
+
+async function deleteTicket(id){
+  if(!confirm("Are you sure you want to delete this ticket?")) return;
+  await fetch(`${API_BASE}/api/tickets/${id}`, { method: "DELETE" });
   loadTickets();
 }
 
@@ -391,50 +414,90 @@ async function loadArtists(){
       <tr>
         <td><img src="${a.image}" style="width:40px;border-radius:50%"></td>
         <td>${a.name}</td>
+        <td>
+          <button class="btn" onclick="editArtist('${a._id}')">Edit</button>
+          <button class="btn" style="background:#e74c3c" onclick="deleteArtist('${a._id}')">Delete</button>
+        </td>
       </tr>
     `;
   });
 }
 
-/* =====================
-   ARTIST MODAL
-===================== */
-function openArtistModal(){ artistModal.style.display = "flex"; }
-function closeArtistModal(){ artistModal.style.display = "none"; }
+function openArtistModal(){
+  artistModalTitle.innerText = editingArtistId ? "Edit Artiste" : "Add Artiste";
+  artistModal.style.display = "flex";
+}
+
+function closeArtistModal(){
+  editingArtistId = null;
+  artistName.value = "";
+  artistImage.value = "";
+  artistModal.style.display = "none";
+}
 
 async function saveArtist(){
   const name = artistName.value.trim();
   const image = artistImage.files[0];
 
-  if(!name || !image){
-    alert("Name and image required");
+  if(!name){
+    alert("Name is required");
     return;
   }
 
   const fd = new FormData();
   fd.append("name", name);
-  fd.append("image", image);
+  if(image) fd.append("image", image);
 
   try{
-    const res = await fetch(`${API_BASE}/api/artistes`, {
-      method: "POST",
-      body: fd
-    });
+    const url = editingArtistId ? `${API_BASE}/api/artistes/${editingArtistId}` : `${API_BASE}/api/artistes`;
+    const method = editingArtistId ? "PUT" : "POST";
 
+    const res = await fetch(url, { method, body: fd });
     if(!res.ok){
-      const text = await res.text();
-      console.error("Server response:", text);
-      alert("Failed to save artiste. Check backend.");
+      const data = await res.json();
+      alert(data.error || "Failed to save artiste");
       return;
     }
-
-    const data = await res.json();
     closeArtistModal();
     loadArtists();
   }catch(err){
-    console.error("Network error:", err);
-    alert("Failed to save artiste. Check console.");
+    console.error(err);
+    alert("Failed to save artiste");
   }
+}
+
+async function editArtist(id){
+  editingArtistId = id;
+  const res = await fetch(`${API_BASE}/api/artistes/${id}`);
+  const data = await res.json();
+  artistName.value = data.name;
+  artistImage.value = "";
+  openArtistModal();
+}
+
+async function deleteArtist(id){
+  if(!confirm("Are you sure you want to delete this artiste?")) return;
+  await fetch(`${API_BASE}/api/artistes/${id}`, { method: "DELETE" });
+  loadArtists();
+}
+
+/* =====================
+   ORDERS
+===================== */
+async function loadOrders(){
+  const res = await fetch(`${API_BASE}/api/orders`);
+  const orders = await res.json();
+  ordersTable.innerHTML = "";
+  orders.forEach(o=>{
+    ordersTable.innerHTML += `
+      <tr>
+        <td>${o.orderId}</td>
+        <td>${o.buyer.name}<br><small>${o.buyer.email}</small></td>
+        <td>${o.ticketType}</td>
+        <td>₦${o.amount.toLocaleString()}</td>
+      </tr>
+    `;
+  });
 }
 
 /* =====================
