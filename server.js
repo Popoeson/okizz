@@ -77,10 +77,24 @@ const Event = mongoose.model("Event", eventSchema);
 
 // ---- Ticket Type ----
 const ticketSchema = new mongoose.Schema({
-  eventId: mongoose.Schema.Types.ObjectId,
-  name: String, // VIP, Regular
-  price: Number,
-  available: Number
+  eventId: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true
+  },
+  name: {
+    type: String,
+    required: true
+  },
+  description: String,
+  price: {
+    type: Number,
+    required: true
+  },
+  available: {
+    type: Number,
+    default: 100
+  },
+  image: String
 }, { timestamps: true });
 
 const Ticket = mongoose.model("Ticket", ticketSchema);
@@ -150,29 +164,40 @@ app.get("/api/events", async (req, res) => {
 // =====================
 
 // Create Ticket Type
-app.post("/api/tickets", async (req, res) => {
+app.post("/api/tickets", upload.single("image"), async (req, res) => {
   try {
-    const { eventId, name, price, available } = req.body;
+    const { eventId, name, description, price, available } = req.body;
+
+    if (!eventId || !name || !price) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    let imageUrl = "";
+
+    if (req.file) {
+      const uploadResult = await uploadToCloudinary(
+        req.file.buffer,
+        "concert_tickets"
+      );
+      imageUrl = uploadResult.secure_url;
+    }
 
     const ticket = new Ticket({
       eventId,
       name,
-      price,
-      available
+      description,
+      price: Number(price),
+      available: available ? Number(available) : 100,
+      image: imageUrl
     });
 
     await ticket.save();
     res.status(201).json(ticket);
 
-  } catch {
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ error: "Failed to create ticket" });
   }
-});
-
-// Get Tickets for Event
-app.get("/api/tickets/:eventId", async (req, res) => {
-  const tickets = await Ticket.find({ eventId: req.params.eventId });
-  res.json(tickets);
 });
 
 // =====================
