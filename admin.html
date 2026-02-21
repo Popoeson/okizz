@@ -298,9 +298,16 @@ const artistModalTitle = document.getElementById("artistModalTitle");
 const artistName = document.getElementById("artistName");
 const artistImage = document.getElementById("artistImage");
 
+const heroTable = document.getElementById("heroTable");
+const heroModal = document.getElementById("heroModal");
+const heroModalTitle = document.getElementById("heroModalTitle");
+const heroImageInput = document.getElementById("heroImageInput");
+
+
 // STATE
 let editingTicketId = null;
 let editingArtistId = null;
+let editingHeroId = null;
 
 /* =====================
    SIDEBAR
@@ -529,6 +536,102 @@ async function loadOrders(){
       </tr>
     `;
   });
+}
+
+
+// HERO LOGIC
+async function loadHero(){
+  const res = await fetch(`${API_BASE}/api/hero`);
+  const heroes = await res.json();
+  heroTable.innerHTML = "";
+  heroes.forEach(h=>{
+    heroTable.innerHTML += `
+      <tr>
+        <td><img src="${h.image}" style="width:60px;border-radius:8px"></td>
+        <td>${h.active ? "Active" : "Inactive"}</td>
+        <td>
+          <button class="btn" onclick="editHero('${h._id}')">Edit</button>
+          <button class="btn" style="background:#e74c3c" onclick="deleteHero('${h._id}')">Delete</button>
+          <button class="btn" style="background:${h.active ? '#ccc' : '#6B8E23'}" onclick="toggleHero('${h._id}', ${h.active})">
+            ${h.active ? 'Deactivate' : 'Activate'}
+          </button>
+        </td>
+      </tr>
+    `;
+  });
+}
+
+function openHeroModal(){
+  heroModalTitle.innerText = editingHeroId ? "Edit Hero Image" : "Add Hero Image";
+  heroModal.style.display = "flex";
+}
+
+function closeHeroModal(){
+  editingHeroId = null;
+  heroImageInput.value = "";
+  heroModal.style.display = "none";
+}
+
+async function saveHero(){
+  const image = heroImageInput.files[0];
+  if(!image && !editingHeroId){
+    alert("Image is required");
+    return;
+  }
+
+  const fd = new FormData();
+  if(image) fd.append("image", image);
+
+  try{
+    const url = editingHeroId ? `${API_BASE}/api/hero/${editingHeroId}` : `${API_BASE}/api/hero`;
+    const method = editingHeroId ? "PUT" : "POST";
+
+    const res = await fetch(url, { method, body: fd });
+    if(!res.ok){
+      const data = await res.json();
+      alert(data.error || "Failed to save hero image");
+      return;
+    }
+    closeHeroModal();
+    loadHero();
+  }catch(err){
+    console.error(err);
+    alert("Error saving hero image");
+  }
+}
+
+async function editHero(id){
+  editingHeroId = id;
+  const res = await fetch(`${API_BASE}/api/hero/${id}`);
+  const data = await res.json();
+  // no prefill for image input
+  openHeroModal();
+}
+
+async function deleteHero(id){
+  if(!confirm("Are you sure you want to delete this hero image?")) return;
+  await fetch(`${API_BASE}/api/hero/${id}`, { method: "DELETE" });
+  loadHero();
+}
+
+async function toggleHero(id, currentStatus){
+  await fetch(`${API_BASE}/api/hero/${id}/toggle`, { method: "PATCH" });
+  loadHero();
+}
+
+// Call loadHero when page is shown
+function showPage(id, el){
+  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+  document.querySelectorAll(".sidebar li").forEach(l=>l.classList.remove("active"));
+  el.classList.add("active");
+  toggleSidebar();
+
+  if(id==="tickets") loadTickets();
+  if(id==="artists") loadArtists();
+  if(id==="orders") loadOrders();
+  if(id==="dashboard") loadDashboard();
+  if(id==="hero") loadHero();
 }
 
 /* =====================
