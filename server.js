@@ -75,26 +75,24 @@ const eventSchema = new mongoose.Schema({
 
 const Event = mongoose.model("Event", eventSchema);
 
-// ---- Ticket Type ----
+// ---- Ticket Schema ----
 const ticketSchema = new mongoose.Schema({
-  eventId: {
-    type: mongoose.Schema.Types.ObjectId,
+  image: {
+    type: String,
     required: true
   },
   name: {
     type: String,
     required: true
   },
-  description: String,
+  description: {
+    type: String,
+    required: true
+  },
   price: {
     type: Number,
     required: true
-  },
-  available: {
-    type: Number,
-    default: 100
-  },
-  image: String
+  }
 }, { timestamps: true });
 
 const Ticket = mongoose.model("Ticket", ticketSchema);
@@ -166,39 +164,34 @@ app.get("/api/events", async (req, res) => {
 // Create Ticket Type
 app.post("/api/tickets", upload.single("image"), async (req, res) => {
   try {
-    const { eventId, name, description, price, available } = req.body;
+    const { name, description, price } = req.body;
 
-    if (!eventId || !name || !price) {
-      return res.status(400).json({ error: "Missing required fields" });
+    if (!req.file || !name || !description || !price) {
+      return res.status(400).json({ error: "All fields are required" });
     }
 
-    let imageUrl = "";
-
-    if (req.file) {
-      const uploadResult = await uploadToCloudinary(
-        req.file.buffer,
-        "concert_tickets"
-      );
-      imageUrl = uploadResult.secure_url;
-    }
+    // Upload image to Cloudinary
+    const result = await uploadToCloudinary(
+      req.file.buffer,
+      "concert_tickets"
+    );
 
     const ticket = new Ticket({
-      eventId,
+      image: result.secure_url,
       name,
       description,
-      price: Number(price),
-      available: available ? Number(available) : 100,
-      image: imageUrl
+      price: Number(price)
     });
 
     await ticket.save();
     res.status(201).json(ticket);
 
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to create ticket" });
+    console.error("Create Ticket Error:", err.message);
+    res.status(500).json({ error: err.message });
   }
 });
+
 
 // =====================
 // PAYSTACK
