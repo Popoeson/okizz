@@ -19,15 +19,19 @@
   --accent:#6B8E23;
   --blur:blur(18px);
 }
+
 *{margin:0;padding:0;box-sizing:border-box}
+
 body{
   background:var(--bg-main);
   font-family:Inter,sans-serif;
   color:var(--text-dark);
 }
+
+/* ===== LAYOUT ===== */
 .admin-wrapper{display:flex;min-height:100vh}
 
-/* SIDEBAR */
+/* ===== SIDEBAR ===== */
 .sidebar{
   width:260px;
   position:fixed;
@@ -36,6 +40,8 @@ body{
   backdrop-filter:var(--blur);
   color:#fff;
   padding:28px 18px;
+  z-index:1000;
+  transition:.3s;
 }
 .sidebar h2{
   font-family:Playfair Display,serif;
@@ -48,46 +54,97 @@ body{
   cursor:pointer;
   margin-bottom:10px;
 }
-.sidebar li:hover,.sidebar li.active{
+.sidebar li.active,
+.sidebar li:hover{
   background:rgba(255,255,255,.18);
 }
 
-/* MAIN */
+/* ===== OVERLAY ===== */
+#overlay{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.4);
+  opacity:0;
+  pointer-events:none;
+  transition:.3s;
+  z-index:900;
+}
+#overlay.show{
+  opacity:1;
+  pointer-events:auto;
+}
+
+/* ===== MAIN ===== */
 .main{
   margin-left:260px;
   padding:28px;
   width:100%;
 }
+
+/* ===== TOPBAR ===== */
+.topbar{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:18px 22px;
+  margin-bottom:28px;
+}
+.hamburger{
+  display:none;
+  font-size:22px;
+  cursor:pointer;
+}
+
 .glass{
   background:var(--glass-bg);
   backdrop-filter:var(--blur);
   border:1px solid var(--glass-border);
   border-radius:22px;
 }
-.topbar{
-  padding:18px 22px;
-  margin-bottom:28px;
-}
-.page{display:none}
-.page.active{display:block}
 
-/* TABLE */
-table{width:100%;border-collapse:collapse}
+/* ===== DASHBOARD METRICS ===== */
+.metrics{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:22px;
+  margin-bottom:32px;
+}
+.metric{
+  padding:22px;
+}
+.metric h4{
+  font-size:13px;
+  text-transform:uppercase;
+  color:var(--text-muted);
+}
+.metric p{
+  font-size:28px;
+  font-weight:600;
+  margin-top:8px;
+}
+
+/* ===== TABLE ===== */
+.table-wrapper{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:600px}
 th,td{padding:16px;text-align:left}
 th{color:var(--text-muted)}
-tr:not(:last-child){border-bottom:1px solid rgba(0,0,0,.1)}
+tr:not(:last-child){border-bottom:1px solid rgba(0,0,0,.08)}
 
-/* BUTTON */
+/* ===== BUTTON ===== */
 .btn{
   padding:10px 22px;
-  border:none;
   border-radius:999px;
+  border:none;
   cursor:pointer;
   background:var(--accent);
   color:#fff;
 }
 
-/* MODAL */
+/* ===== PAGE ===== */
+.page{display:none}
+.page.active{display:block}
+
+/* ===== MODAL ===== */
 .modal{
   position:fixed;
   inset:0;
@@ -111,6 +168,17 @@ tr:not(:last-child){border-bottom:1px solid rgba(0,0,0,.1)}
   border-radius:12px;
   border:1px solid #ccc;
 }
+
+/* ===== RESPONSIVE ===== */
+@media(max-width:900px){
+  .metrics{grid-template-columns:repeat(2,1fr);}
+}
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%)}
+  .sidebar.show{transform:translateX(0)}
+  .main{margin-left:0}
+  .hamburger{display:block}
+}
 </style>
 </head>
 
@@ -119,7 +187,7 @@ tr:not(:last-child){border-bottom:1px solid rgba(0,0,0,.1)}
 <div class="admin-wrapper">
 
 <!-- SIDEBAR -->
-<aside class="sidebar">
+<aside class="sidebar" id="sidebar">
   <h2>CONCERT</h2>
   <ul>
     <li class="active" onclick="showPage('dashboard',this)">Dashboard</li>
@@ -130,26 +198,33 @@ tr:not(:last-child){border-bottom:1px solid rgba(0,0,0,.1)}
   </ul>
 </aside>
 
+<div id="overlay" onclick="toggleSidebar()"></div>
+
 <!-- MAIN -->
 <main class="main">
 
 <div class="topbar glass">
+  <span class="hamburger" onclick="toggleSidebar()">☰</span>
   <strong>Concert Admin Panel</strong>
 </div>
 
 <!-- DASHBOARD -->
-<section id="dashboard" class="page active glass" style="padding:22px">
-  <h3>Welcome Admin</h3>
+<section id="dashboard" class="page active">
+  <div class="metrics">
+    <div class="metric glass"><h4>Total Revenue</h4><p id="rev">₦0</p></div>
+    <div class="metric glass"><h4>Total Orders</h4><p id="ordersCount">0</p></div>
+    <div class="metric glass"><h4>Total Tickets</h4><p id="ticketCount">0</p></div>
+    <div class="metric glass"><h4>Avg Order</h4><p id="avg">₦0</p></div>
+  </div>
 </section>
 
 <!-- TICKETS -->
 <section id="tickets" class="page">
   <div style="display:flex;justify-content:space-between;margin-bottom:18px">
     <h3>Tickets</h3>
-    <button class="btn" onclick="openTicketModal()">+ Add Ticket</button>
+    <button class="btn" onclick="openModal('ticket')">+ Add Ticket</button>
   </div>
-
-  <div class="glass">
+  <div class="glass table-wrapper">
     <table>
       <thead>
         <tr>
@@ -169,10 +244,9 @@ tr:not(:last-child){border-bottom:1px solid rgba(0,0,0,.1)}
 <section id="artists" class="page">
   <div style="display:flex;justify-content:space-between;margin-bottom:18px">
     <h3>Artistes</h3>
-    <button class="btn" onclick="openArtistModal()">+ Add Artiste</button>
+    <button class="btn" onclick="openModal('artist')">+ Add Artiste</button>
   </div>
-
-  <div class="glass">
+  <div class="glass table-wrapper">
     <table>
       <thead>
         <tr>
@@ -187,7 +261,7 @@ tr:not(:last-child){border-bottom:1px solid rgba(0,0,0,.1)}
 </section>
 
 <!-- ORDERS -->
-<section id="orders" class="page glass">
+<section id="orders" class="page glass table-wrapper">
   <table>
     <thead>
       <tr>
@@ -211,56 +285,39 @@ tr:not(:last-child){border-bottom:1px solid rgba(0,0,0,.1)}
     <input id="name" placeholder="Name">
     <textarea id="description" placeholder="Description"></textarea>
     <input id="price" type="number" placeholder="Price">
-    <input id="image" type="file" accept="image/*">
-    <button class="btn" onclick="submitForm()">Save</button>
+    <input id="image" type="file">
+    <button class="btn" onclick="save()">Save</button>
     <button class="btn" style="background:#ccc;color:#333" onclick="closeModal()">Cancel</button>
   </div>
 </div>
 
 <script>
-const API = "https://your-backend-url.com/api";
-let currentPage="tickets";
-let editId=null;
+const sidebar=document.getElementById("sidebar");
+const modal=document.getElementById("modal");
+let mode="ticket";
+
+function toggleSidebar(){
+  sidebar.classList.toggle("show");
+  overlay.classList.toggle("show");
+}
 
 function showPage(id,el){
   document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
   document.getElementById(id).classList.add("active");
   document.querySelectorAll(".sidebar li").forEach(l=>l.classList.remove("active"));
   el.classList.add("active");
-  currentPage=id;
+  toggleSidebar();
 }
 
-const modal=document.getElementById("modal");
-
-function openTicketModal(ticket={}){
+function openModal(type){
+  mode=type;
   modal.style.display="flex";
-  editId=ticket._id||null;
-  modalTitle.innerText=editId?"Edit Ticket":"Add Ticket";
+  modalTitle.innerText=type==="ticket"?"Add Ticket":"Add Artiste";
 }
+function closeModal(){modal.style.display="none"}
 
-function openArtistModal(artist={}){
-  modal.style.display="flex";
-  editId=artist._id||null;
-  modalTitle.innerText=editId?"Edit Artiste":"Add Artiste";
-}
-
-function closeModal(){
-  modal.style.display="none";
-  editId=null;
-}
-
-async function submitForm(){
-  const form=new FormData();
-  form.append("name",name.value);
-  form.append("description",description.value);
-  form.append("price",price.value);
-  if(image.files[0]) form.append("image",image.files[0]);
-
-  const url=currentPage==="tickets" ? "tickets" : "artists";
-  const method=editId?"PUT":"POST";
-  const endpoint=editId?`${API}/${url}/${editId}`:`${API}/${url}`;
-
-  await fetch(endpoint,{method,body:form});
+function save(){
+  alert(`${mode} saved (connect backend)`);
   closeModal();
 }
 </script>
