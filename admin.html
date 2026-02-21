@@ -15,23 +15,18 @@
   --glass-dark:rgba(25,25,25,0.55);
   --text-dark:#2A2A2A;
   --text-muted:#6F6F6F;
-  --text-light:#fff;
   --accent:#6B8E23;
   --blur:blur(18px);
 }
-
 *{margin:0;padding:0;box-sizing:border-box}
-
 body{
   background:var(--bg-main);
   font-family:Inter,sans-serif;
   color:var(--text-dark);
 }
-
-/* ===== LAYOUT ===== */
 .admin-wrapper{display:flex;min-height:100vh}
 
-/* ===== SIDEBAR ===== */
+/* SIDEBAR */
 .sidebar{
   width:260px;
   position:fixed;
@@ -41,12 +36,8 @@ body{
   color:#fff;
   padding:28px 18px;
   z-index:1000;
-  transition:.3s;
 }
-.sidebar h2{
-  font-family:Playfair Display,serif;
-  margin-bottom:40px;
-}
+.sidebar h2{font-family:Playfair Display,serif;margin-bottom:40px}
 .sidebar li{
   list-style:none;
   padding:14px 16px;
@@ -54,46 +45,23 @@ body{
   cursor:pointer;
   margin-bottom:10px;
 }
-.sidebar li.active,
-.sidebar li:hover{
-  background:rgba(255,255,255,.18);
-}
+.sidebar li.active,.sidebar li:hover{background:rgba(255,255,255,.18)}
 
-/* ===== OVERLAY ===== */
 #overlay{
-  position:fixed;
-  inset:0;
+  position:fixed;inset:0;
   background:rgba(0,0,0,.4);
-  opacity:0;
-  pointer-events:none;
-  transition:.3s;
-  z-index:900;
+  opacity:0;pointer-events:none;
+  transition:.3s;z-index:900;
 }
-#overlay.show{
-  opacity:1;
-  pointer-events:auto;
-}
+#overlay.show{opacity:1;pointer-events:auto}
 
-/* ===== MAIN ===== */
-.main{
-  margin-left:260px;
-  padding:28px;
-  width:100%;
-}
-
-/* ===== TOPBAR ===== */
+/* MAIN */
+.main{margin-left:260px;padding:28px;width:100%}
 .topbar{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  padding:18px 22px;
-  margin-bottom:28px;
+  display:flex;justify-content:space-between;align-items:center;
+  padding:18px 22px;margin-bottom:28px;
 }
-.hamburger{
-  display:none;
-  font-size:22px;
-  cursor:pointer;
-}
+.hamburger{display:none;font-size:22px;cursor:pointer}
 
 .glass{
   background:var(--glass-bg);
@@ -102,74 +70,49 @@ body{
   border-radius:22px;
 }
 
-/* ===== DASHBOARD METRICS ===== */
+/* DASHBOARD */
 .metrics{
   display:grid;
   grid-template-columns:repeat(4,1fr);
-  gap:22px;
-  margin-bottom:32px;
+  gap:22px;margin-bottom:32px;
 }
-.metric{
-  padding:22px;
-}
-.metric h4{
-  font-size:13px;
-  text-transform:uppercase;
-  color:var(--text-muted);
-}
-.metric p{
-  font-size:28px;
-  font-weight:600;
-  margin-top:8px;
-}
+.metric{padding:22px}
+.metric h4{font-size:13px;text-transform:uppercase;color:var(--text-muted)}
+.metric p{font-size:28px;font-weight:600;margin-top:8px}
 
-/* ===== TABLE ===== */
+/* TABLE */
 .table-wrapper{overflow-x:auto}
 table{width:100%;border-collapse:collapse;min-width:600px}
 th,td{padding:16px;text-align:left}
 th{color:var(--text-muted)}
 tr:not(:last-child){border-bottom:1px solid rgba(0,0,0,.08)}
 
-/* ===== BUTTON ===== */
 .btn{
-  padding:10px 22px;
-  border-radius:999px;
-  border:none;
-  cursor:pointer;
-  background:var(--accent);
-  color:#fff;
+  padding:10px 22px;border-radius:999px;
+  border:none;cursor:pointer;
+  background:var(--accent);color:#fff;
 }
 
-/* ===== PAGE ===== */
 .page{display:none}
 .page.active{display:block}
 
-/* ===== MODAL ===== */
+/* MODALS */
 .modal{
-  position:fixed;
-  inset:0;
+  position:fixed;inset:0;
   background:rgba(0,0,0,.45);
-  display:none;
-  align-items:center;
-  justify-content:center;
+  display:none;align-items:center;justify-content:center;
   z-index:2000;
 }
 .modal-content{
-  width:90%;
-  max-width:460px;
+  width:90%;max-width:460px;
   padding:26px;
-  display:flex;
-  flex-direction:column;
-  gap:12px;
+  display:flex;flex-direction:column;gap:12px;
 }
 .modal-content input,
 .modal-content textarea{
-  padding:12px;
-  border-radius:12px;
-  border:1px solid #ccc;
+  padding:12px;border-radius:12px;border:1px solid #ccc;
 }
 
-/* ===== RESPONSIVE ===== */
 @media(max-width:900px){
   .metrics{grid-template-columns:repeat(2,1fr);}
 }
@@ -193,7 +136,6 @@ tr:not(:last-child){border-bottom:1px solid rgba(0,0,0,.08)}
     <li class="active" onclick="showPage('dashboard',this)">Dashboard</li>
     <li onclick="showPage('tickets',this)">Tickets</li>
     <li onclick="showPage('orders',this)">Orders</li>
-    <li onclick="window.location.href='hero.html'">Hero Section</li>
     <li onclick="showPage('artists',this)">Artistes</li>
   </ul>
 </aside>
@@ -202,7 +144,6 @@ tr:not(:last-child){border-bottom:1px solid rgba(0,0,0,.08)}
 
 <!-- MAIN -->
 <main class="main">
-
 <div class="topbar glass">
   <span class="hamburger" onclick="toggleSidebar()">☰</span>
   <strong>Concert Admin Panel</strong>
@@ -222,7 +163,7 @@ tr:not(:last-child){border-bottom:1px solid rgba(0,0,0,.08)}
 <section id="tickets" class="page">
   <div style="display:flex;justify-content:space-between;margin-bottom:18px">
     <h3>Tickets</h3>
-    <button class="btn" onclick="openModal('ticket')">+ Add Ticket</button>
+    <button class="btn" onclick="openTicketModal()">+ Add Ticket</button>
   </div>
   <div class="glass table-wrapper">
     <table>
@@ -232,7 +173,6 @@ tr:not(:last-child){border-bottom:1px solid rgba(0,0,0,.08)}
           <th>Name</th>
           <th>Description</th>
           <th>Price</th>
-          <th>Action</th>
         </tr>
       </thead>
       <tbody id="ticketsTable"></tbody>
@@ -244,16 +184,12 @@ tr:not(:last-child){border-bottom:1px solid rgba(0,0,0,.08)}
 <section id="artists" class="page">
   <div style="display:flex;justify-content:space-between;margin-bottom:18px">
     <h3>Artistes</h3>
-    <button class="btn" onclick="openModal('artist')">+ Add Artiste</button>
+    <button class="btn" onclick="openArtistModal()">+ Add Artiste</button>
   </div>
   <div class="glass table-wrapper">
     <table>
       <thead>
-        <tr>
-          <th>Image</th>
-          <th>Name</th>
-          <th>Action</th>
-        </tr>
+        <tr><th>Image</th><th>Name</th></tr>
       </thead>
       <tbody id="artistsTable"></tbody>
     </table>
@@ -278,170 +214,127 @@ tr:not(:last-child){border-bottom:1px solid rgba(0,0,0,.08)}
 </main>
 </div>
 
-<!-- MODAL -->
-<div class="modal" id="modal">
+<!-- TICKET MODAL -->
+<div class="modal" id="ticketModal">
   <div class="modal-content glass">
-    <h3 id="modalTitle"></h3>
-    <input id="name" placeholder="Name">
-    <textarea id="description" placeholder="Description"></textarea>
-    <input id="price" type="number" placeholder="Price">
-    <input id="image" type="file">
-    <button class="btn" onclick="save()">Save</button>
-    <button class="btn" style="background:#ccc;color:#333" onclick="closeModal()">Cancel</button>
+    <h3>Add Ticket</h3>
+    <input id="ticketName" placeholder="Ticket Name">
+    <textarea id="ticketDescription" placeholder="Description"></textarea>
+    <input id="ticketPrice" type="number" placeholder="Price">
+    <input id="ticketImage" type="file">
+    <button class="btn" onclick="saveTicket()">Save</button>
+    <button class="btn" style="background:#ccc;color:#333" onclick="closeTicketModal()">Cancel</button>
+  </div>
+</div>
+
+<!-- ARTIST MODAL -->
+<div class="modal" id="artistModal">
+  <div class="modal-content glass">
+    <h3>Add Artiste</h3>
+    <input id="artistName" placeholder="Artiste Name">
+    <input id="artistImage" type="file">
+    <button class="btn">Save</button>
+    <button class="btn" style="background:#ccc;color:#333" onclick="closeArtistModal()">Cancel</button>
   </div>
 </div>
 
 <script>
 const API_BASE = "https://okizz.onrender.com";
-
 const sidebar = document.getElementById("sidebar");
-const modal = document.getElementById("modal");
-const ticketsTable = document.getElementById("ticketsTable");
-const ordersTable = document.getElementById("ordersTable");
+const overlay = document.getElementById("overlay");
 
-let mode = "ticket";
-let currentEventId = null;
-
-/* =====================
-   UI CONTROLS
-===================== */
 function toggleSidebar(){
   sidebar.classList.toggle("show");
   overlay.classList.toggle("show");
 }
-
 function showPage(id, el){
   document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
   document.getElementById(id).classList.add("active");
   document.querySelectorAll(".sidebar li").forEach(l=>l.classList.remove("active"));
   el.classList.add("active");
   toggleSidebar();
-
-  if(id === "dashboard") loadDashboard();
-  if(id === "tickets") loadTickets();
-  if(id === "orders") loadOrders();
+  if(id==="tickets") loadTickets();
+  if(id==="orders") loadOrders();
+  if(id==="dashboard") loadDashboard();
 }
 
-function openModal(type){
-  mode = type;
-  modal.style.display = "flex";
-  modalTitle.innerText = type === "ticket" ? "Add Ticket" : "Add Artiste";
-}
-
-function closeModal(){
-  modal.style.display = "none";
-}
-
-/* =====================
-   DASHBOARD
-===================== */
+/* DASHBOARD */
 async function loadDashboard(){
   const res = await fetch(`${API_BASE}/api/orders`);
   const orders = await res.json();
-
   let revenue = 0;
-  orders.forEach(o => revenue += o.amount);
-
+  orders.forEach(o=>revenue+=o.amount);
   document.getElementById("rev").innerText = `₦${revenue.toLocaleString()}`;
   document.getElementById("ordersCount").innerText = orders.length;
-
-  const avg = orders.length ? revenue / orders.length : 0;
-  document.getElementById("avg").innerText = `₦${avg.toFixed(0)}`;
+  document.getElementById("avg").innerText =
+    `₦${orders.length ? (revenue/orders.length).toFixed(0) : 0}`;
 }
 
-/* =====================
-   TICKETS
-===================== */
+/* TICKETS */
 async function loadTickets(){
-  ticketsTable.innerHTML = "";
-
-  // Fetch first event (single concert assumption)
-  const evRes = await fetch(`${API_BASE}/api/events`);
-  const events = await evRes.json();
-  if(!events.length) return;
-
-  currentEventId = events[0]._id;
-
-  const res = await fetch(`${API_BASE}/api/tickets/${currentEventId}`);
+  const res = await fetch(`${API_BASE}/api/tickets`);
   const tickets = await res.json();
-
-tickets.forEach(t => {
-  ticketsTable.innerHTML += `
-    <tr>
-      <td>
-        ${t.image ? `<img src="${t.image}" style="width:40px;border-radius:8px">` : "🎟"}
-      </td>
-      <td>${t.name}</td>
-      <td>${t.description || `${t.available} left`}</td>
-      <td>₦${t.price.toLocaleString()}</td>
-      <td>-</td>
-    </tr>
-  `;
-});
-
+  ticketsTable.innerHTML="";
+  tickets.forEach(t=>{
+    ticketsTable.innerHTML+=`
+      <tr>
+        <td><img src="${t.image}" style="width:40px;border-radius:8px"></td>
+        <td>${t.name}</td>
+        <td>${t.description}</td>
+        <td>₦${t.price.toLocaleString()}</td>
+      </tr>`;
+  });
   document.getElementById("ticketCount").innerText = tickets.length;
 }
 
-/* =====================
-   ORDERS
-===================== */
+/* ORDERS */
 async function loadOrders(){
-  ordersTable.innerHTML = "";
-
   const res = await fetch(`${API_BASE}/api/orders`);
   const orders = await res.json();
-
-  orders.forEach(o => {
-    ordersTable.innerHTML += `
+  ordersTable.innerHTML="";
+  orders.forEach(o=>{
+    ordersTable.innerHTML+=`
       <tr>
         <td>${o.orderId}</td>
         <td>${o.buyer.name}<br><small>${o.buyer.email}</small></td>
         <td>${o.ticketType}</td>
         <td>₦${o.amount.toLocaleString()}</td>
-      </tr>
-    `;
+      </tr>`;
   });
 }
 
-/* =====================
-   SAVE TICKET
-===================== */
-async function save(){
-  if (mode !== "ticket") return closeModal();
+/* TICKET MODAL */
+function openTicketModal(){ticketModal.style.display="flex"}
+function closeTicketModal(){ticketModal.style.display="none"}
 
-  const name = document.getElementById("name").value;
-  const description = document.getElementById("description").value;
-  const price = document.getElementById("price").value;
-  const image = document.getElementById("image").files[0];
+async function saveTicket(){
+  const name=ticketName.value.trim();
+  const description=ticketDescription.value.trim();
+  const price=ticketPrice.value;
+  const image=ticketImage.files[0];
 
-  if (!name || !price) {
-    alert("Name and price are required");
-    return;
+  if(!name||!description||!price||!image){
+    alert("All fields required");return;
   }
 
-  const formData = new FormData();
-  formData.append("eventId", currentEventId);
-  formData.append("name", name);
-  formData.append("description", description);
-  formData.append("price", price);
-  if (image) formData.append("image", image);
+  const fd=new FormData();
+  fd.append("name",name);
+  fd.append("description",description);
+  fd.append("price",price);
+  fd.append("image",image);
 
-  const res = await fetch(`${API_BASE}/api/tickets`, {
-    method: "POST",
-    body: formData
-  });
+  const res=await fetch(`${API_BASE}/api/tickets`,{method:"POST",body:fd});
+  const data=await res.json();
+  if(!res.ok){alert(data.error);return;}
 
-  if (!res.ok) {
-    alert("Failed to create ticket");
-    return;
-  }
-
-  closeModal();
+  closeTicketModal();
   loadTickets();
 }
-/* =====================
-   INIT
-===================== */
+
+/* ARTIST MODAL */
+function openArtistModal(){artistModal.style.display="flex"}
+function closeArtistModal(){artistModal.style.display="none"}
+
 loadDashboard();
 </script>
 
