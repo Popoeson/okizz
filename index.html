@@ -567,12 +567,6 @@ async function fetchFeaturedTickets(){
 // ===============================
 // CAROUSEL HELPERS
 // ===============================
-function calculateCardWidth(){
-  const track = document.getElementById('featuredTrack');
-  const card = track.querySelector('.product-card');
-  if (!card) return;
-  cardWidth = card.offsetWidth + 20;
-}
 
 function activateCard(index, smooth = true){
   const track = document.getElementById('featuredTrack');
@@ -582,10 +576,10 @@ function activateCard(index, smooth = true){
   cards.forEach(c => c.classList.remove('active'));
   cards[index].classList.add('active');
 
-  const center = cards[index].offsetLeft + cards[index].offsetWidth / 2;
-  track.scrollTo({
-    left: center - track.offsetWidth / 2,
-    behavior: smooth ? 'smooth' : 'auto'
+  cards[index].scrollIntoView({
+    behavior: smooth ? "smooth" : "auto",
+    inline: "center",
+    block: "nearest"
   });
 
   currentIndex = index;
@@ -636,7 +630,11 @@ function snapToClosestCard(){
   let min = Infinity;
 
   cards.forEach((c, i) => {
-    const dist = Math.abs(center - (c.offsetLeft + c.offsetWidth / 2));
+    const rect = c.getBoundingClientRect();
+    const cardCenter = rect.left + rect.width / 2;
+    const trackCenter = track.getBoundingClientRect().left + track.offsetWidth / 2;
+    const dist = Math.abs(trackCenter - cardCenter);
+
     if (dist < min) {
       min = dist;
       closest = i;
