@@ -3,6 +3,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const multer = require("multer");
+const axios = require("axios");
 const cloudinary = require("cloudinary").v2;
 
 const app = express();
@@ -77,6 +78,41 @@ const heroSchema = new mongoose.Schema(
 );
 
 const Hero = mongoose.model("Hero", heroSchema);
+
+/* =====================
+   ORDER SCHEMA
+===================== */
+const orderSchema = new mongoose.Schema(
+  {
+    name: String,
+    phone: String,
+    email: String,
+
+    items: [
+      {
+        ticketId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Ticket"
+        },
+        name: String,
+        price: Number,
+        quantity: Number
+      }
+    ],
+
+    totalAmount: Number,
+
+    paymentReference: String,
+    paymentStatus: {
+      type: String,
+      enum: ["pending", "paid", "failed"],
+      default: "pending"
+    }
+  },
+  { timestamps: true }
+);
+
+const Order = mongoose.model("Order", orderSchema);
 
 
 /* =====================
