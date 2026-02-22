@@ -347,30 +347,28 @@ document.getElementById('cartOverlay')?.addEventListener('click', closeCart);
 // ===============================
 async function fetchHeroes(){
   try {
-    const res = await fetch(`${API_BASE}/api/heroes`);
+    // ✅ FIXED ENDPOINT
+    const res = await fetch(`${API_BASE}/api/hero`);
     if (!res.ok) throw new Error("Hero fetch failed");
 
-    const data = await res.json();
-    console.log("Hero API response:", data);
+    const heroes = await res.json();
+    console.log("Heroes:", heroes);
 
-    // ✅ NORMALIZE RESPONSE
-    const heroes = Array.isArray(data)
-      ? data
-      : data.heroes || data.data || [];
-
-    const heroSection = document.getElementById('heroSection');
+    const heroSection = document.getElementById("heroSection");
     if (!heroSection) return;
 
-    // remove old hero images
+    // Remove old images
     heroSection.querySelectorAll("img").forEach(img => img.remove());
 
-    const activeHeroes = heroes.filter(h => h.isActive === true);
+    // ✅ FIXED FIELD NAME
+    const activeHeroes = heroes.filter(h => h.active === true);
 
-    // ✅ FALLBACK IMAGE (VERY IMPORTANT)
+    // Fallback image if none active
     if (!activeHeroes.length) {
-      const fallback = document.createElement('img');
-      fallback.src = "https://images.unsplash.com/photo-1507874457470-272b3c8d8ee2";
-      fallback.classList.add('active');
+      const fallback = document.createElement("img");
+      fallback.src =
+        "https://images.unsplash.com/photo-1507874457470-272b3c8d8ee2";
+      fallback.classList.add("active");
       heroSection.insertBefore(fallback, heroSection.firstChild);
       return;
     }
@@ -378,34 +376,24 @@ async function fetchHeroes(){
     let index = 0;
 
     activeHeroes.forEach((h, i) => {
-      const img = document.createElement('img');
+      const img = document.createElement("img");
+      img.src = h.image; // ✅ correct backend field
 
-      img.src =
-        h.image ||
-        h.imageUrl ||
-        h.imagePath ||
-        h.url ||
-        h.secure_url;
+      if (i === 0) img.classList.add("active");
 
-      if (!img.src) return;
-
-      if (i === 0) img.classList.add('active');
-
+      // Insert below overlay
       heroSection.insertBefore(img, heroSection.firstChild);
     });
 
-    // ✅ ROTATION
     setInterval(() => {
-      const images = heroSection.querySelectorAll('img');
-      if (!images.length) return;
-
-      images.forEach(img => img.classList.remove('active'));
-      images[index].classList.add('active');
+      const images = heroSection.querySelectorAll("img");
+      images.forEach(img => img.classList.remove("active"));
+      images[index].classList.add("active");
       index = (index + 1) % images.length;
     }, 5000);
 
   } catch (err) {
-    console.error('Hero error:', err);
+    console.error("Hero error:", err);
   }
 }
 
