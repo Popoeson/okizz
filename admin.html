@@ -284,6 +284,7 @@ const overlay = document.getElementById("overlay");
 const ticketsTable = document.getElementById("ticketsTable");
 const ordersTable = document.getElementById("ordersTable");
 const artistsTable = document.getElementById("artistsTable");
+const heroTable = document.getElementById("heroTable");
 
 // Modal elements
 const ticketModal = document.getElementById("ticketModal");
@@ -298,11 +299,9 @@ const artistModalTitle = document.getElementById("artistModalTitle");
 const artistName = document.getElementById("artistName");
 const artistImage = document.getElementById("artistImage");
 
-const heroTable = document.getElementById("heroTable");
 const heroModal = document.getElementById("heroModal");
 const heroModalTitle = document.getElementById("heroModalTitle");
 const heroImageInput = document.getElementById("heroImageInput");
-
 
 // STATE
 let editingTicketId = null;
@@ -328,6 +327,7 @@ function showPage(id, el){
   if(id==="artists") loadArtists();
   if(id==="orders") loadOrders();
   if(id==="dashboard") loadDashboard();
+  if(id==="hero") loadHero();
 }
 
 /* =====================
@@ -336,8 +336,10 @@ function showPage(id, el){
 async function loadDashboard(){
   const res = await fetch(`${API_BASE}/api/orders`);
   const orders = await res.json();
+
   let revenue = 0;
-  orders.forEach(o => revenue += o.amount);
+  orders.forEach(o => revenue += o.totalAmount);
+
   document.getElementById("rev").innerText = `₦${revenue.toLocaleString()}`;
   document.getElementById("ordersCount").innerText = orders.length;
   document.getElementById("avg").innerText =
@@ -419,12 +421,6 @@ async function saveTicket(){
 
 async function editTicket(id){
   editingTicketId = id;
-  const res = await fetch(`${API_BASE}/api/tickets/${id}`);
-  const data = await res.json();
-  ticketName.value = data.name;
-  ticketDescription.value = data.description;
-  ticketPrice.value = data.price;
-  ticketImage.value = "";
   openTicketModal();
 }
 
@@ -506,10 +502,6 @@ async function saveArtist(){
 
 async function editArtist(id){
   editingArtistId = id;
-  const res = await fetch(`${API_BASE}/api/artistes/${id}`);
-  const data = await res.json();
-  artistName.value = data.name;
-  artistImage.value = "";
   openArtistModal();
 }
 
@@ -524,22 +516,30 @@ async function deleteArtist(id){
 ===================== */
 async function loadOrders(){
   const res = await fetch(`${API_BASE}/api/orders`);
+  if(!res.ok){
+    console.error("Orders fetch failed");
+    return;
+  }
+
   const orders = await res.json();
   ordersTable.innerHTML = "";
+
   orders.forEach(o=>{
     ordersTable.innerHTML += `
       <tr>
-        <td>${o.orderId}</td>
-        <td>${o.buyer.name}<br><small>${o.buyer.email}</small></td>
-        <td>${o.ticketType}</td>
-        <td>₦${o.amount.toLocaleString()}</td>
+        <td>${o._id}</td>
+        <td>${o.name}<br><small>${o.email}</small></td>
+        <td>${o.items.length} ticket(s)</td>
+        <td>₦${o.totalAmount.toLocaleString()}</td>
+        <td>${o.paymentStatus}</td>
       </tr>
     `;
   });
 }
 
-
-// HERO LOGIC
+/* =====================
+   HERO
+===================== */
 async function loadHero(){
   const res = await fetch(`${API_BASE}/api/hero`);
   const heroes = await res.json();
@@ -602,9 +602,6 @@ async function saveHero(){
 
 async function editHero(id){
   editingHeroId = id;
-  const res = await fetch(`${API_BASE}/api/hero/${id}`);
-  const data = await res.json();
-  // no prefill for image input
   openHeroModal();
 }
 
@@ -617,21 +614,6 @@ async function deleteHero(id){
 async function toggleHero(id, currentStatus){
   await fetch(`${API_BASE}/api/hero/${id}/toggle`, { method: "PATCH" });
   loadHero();
-}
-
-// Call loadHero when page is shown
-function showPage(id, el){
-  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
-  document.getElementById(id).classList.add("active");
-  document.querySelectorAll(".sidebar li").forEach(l=>l.classList.remove("active"));
-  el.classList.add("active");
-  toggleSidebar();
-
-  if(id==="tickets") loadTickets();
-  if(id==="artists") loadArtists();
-  if(id==="orders") loadOrders();
-  if(id==="dashboard") loadDashboard();
-  if(id==="hero") loadHero();
 }
 
 /* =====================
