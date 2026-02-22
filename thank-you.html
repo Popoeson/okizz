@@ -1,222 +1,262 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Thank You • OKIZZ Concert</title>
+  <meta charset="UTF-8" />
+  <title>Thank You | Okizz</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    *{
+      margin:0;
+      padding:0;
+      box-sizing:border-box;
+      font-family: 'Segoe UI', sans-serif;
+    }
 
-<style>
-:root{
-  --bg:#0f0f0f;
-  --card:#181818;
-  --accent:#25d366;
-  --text:#fff;
-  --muted:#aaa;
-}
+    body{
+      background:#0b0b0b;
+      color:#fff;
+      min-height:100vh;
+    }
 
-*{box-sizing:border-box;margin:0;padding:0}
-body{
-  font-family:Inter,sans-serif;
-  background:var(--bg);
-  color:var(--text);
-}
+    header{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      padding:16px 20px;
+      border-bottom:1px solid #1f1f1f;
+    }
 
-header{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  padding:16px 20px;
-}
+    .logo{
+      font-size:1.3rem;
+      font-weight:600;
+      color:#0f0;
+    }
 
-.logo{
-  font-family:"Playfair Display",serif;
-  font-size:20px;
-}
+    .notify{
+      position:relative;
+      font-size:1.3rem;
+      cursor:pointer;
+    }
 
-.notify{
-  position:relative;
-  cursor:pointer;
-}
+    .badge{
+      position:absolute;
+      top:-5px;
+      right:-6px;
+      background:red;
+      color:#fff;
+      font-size:0.6rem;
+      padding:3px 5px;
+      border-radius:50%;
+      display:none;
+    }
 
-.notify span{
-  position:absolute;
-  top:-6px;
-  right:-6px;
-  background:red;
-  color:#fff;
-  font-size:10px;
-  padding:2px 6px;
-  border-radius:50%;
-  display:none;
-}
+    main{
+      max-width:800px;
+      margin:30px auto;
+      padding:0 16px;
+    }
 
-.section{
-  max-width:800px;
-  margin:40px auto;
-  padding:20px;
-}
+    .card{
+      background:#111;
+      border-radius:12px;
+      padding:20px;
+      margin-bottom:20px;
+      box-shadow:0 0 20px rgba(0,0,0,0.5);
+    }
 
-.card{
-  background:var(--card);
-  border-radius:14px;
-  padding:20px;
-}
+    h2{
+      margin-bottom:10px;
+      color:#0f0;
+    }
 
-h1{
-  font-family:"Playfair Display",serif;
-  margin-bottom:10px;
-}
+    .info p{
+      font-size:0.9rem;
+      margin-bottom:6px;
+      color:#ccc;
+    }
 
-.order-meta p{
-  font-size:0.9rem;
-  margin:6px 0;
-  color:var(--muted);
-}
+    .warning{
+      background:#2a1a00;
+      border:1px solid #ff9900;
+      padding:12px;
+      border-radius:8px;
+      margin-bottom:16px;
+      font-size:0.85rem;
+      color:#ffcc80;
+    }
 
-.ticket{
-  display:flex;
-  gap:12px;
-  margin-top:16px;
-  background:#111;
-  padding:12px;
-  border-radius:12px;
-}
+    .ticket{
+      display:flex;
+      gap:12px;
+      margin-bottom:12px;
+      border-bottom:1px solid #222;
+      padding-bottom:10px;
+    }
 
-.ticket img{
-  width:70px;
-  height:70px;
-  border-radius:10px;
-  object-fit:cover;
-}
+    .ticket img{
+      width:70px;
+      height:70px;
+      border-radius:8px;
+      object-fit:cover;
+    }
 
-.ticket strong{font-size:0.9rem}
+    .ticket-details{
+      flex:1;
+    }
 
-.total{
-  margin-top:16px;
-  font-weight:600;
-  color:var(--accent);
-}
+    .ticket-details strong{
+      font-size:0.9rem;
+      display:block;
+    }
 
-.warning{
-  margin-top:16px;
-  background:#3a1d1d;
-  padding:12px;
-  border-radius:10px;
-  font-size:0.85rem;
-}
+    .ticket-details span{
+      font-size:0.75rem;
+      color:#aaa;
+      display:block;
+    }
 
-.actions{
-  display:flex;
-  gap:10px;
-  margin-top:20px;
-}
+    .price{
+      color:#0f0;
+      font-size:0.85rem;
+      margin-top:4px;
+    }
 
-.actions button{
-  flex:1;
-  padding:12px;
-  border:none;
-  border-radius:999px;
-  font-size:0.85rem;
-  cursor:pointer;
-}
+    .actions{
+      display:flex;
+      gap:12px;
+      margin-top:16px;
+      flex-wrap:wrap;
+    }
 
-.send-btn{background:var(--accent);color:#000}
-.home-btn{background:#333;color:#fff}
-</style>
+    button{
+      flex:1;
+      padding:12px;
+      border:none;
+      border-radius:8px;
+      font-size:0.9rem;
+      cursor:pointer;
+    }
+
+    .home-btn{
+      background:#222;
+      color:#fff;
+    }
+
+    .send-btn{
+      background:#0f0;
+      color:#000;
+      font-weight:600;
+    }
+  </style>
 </head>
-
 <body>
 
 <header>
-  <div class="logo">OKIZZ Concert</div>
+  <div class="logo">OKIZZ</div>
 
-  <div class="notify" onclick="goToPending()">
-    <i class="fa-solid fa-bell"></i>
-    <span id="notifyBadge">1</span>
+  <div class="notify" onclick="location.href='thank-you.html'">
+    🔔
+    <span class="badge" id="notifyBadge">!</span>
   </div>
 </header>
 
-<section class="section">
-  <div class="card" id="orderBox">
-    <h1>Thank You for Your Purchase 🎉</h1>
+<main>
 
-    <div class="order-meta" id="orderMeta"></div>
-
-    <div id="tickets"></div>
-
-    <div class="total" id="totalAmount"></div>
-
-    <div class="warning" id="warningBox" style="display:none">
-      ⚠ Please send your order to admin to confirm your ticket.
-    </div>
-
-    <div class="actions">
-      <button class="send-btn" onclick="sendToAdmin()">Send to Admin</button>
-      <button class="home-btn" onclick="location.href='index.html'">Back to Home</button>
-    </div>
+  <div class="card">
+    <h2>Thank You for Your Purchase 🎉</h2>
+    <p style="font-size:0.9rem;color:#bbb">
+      Your payment was successful. Please send your order to admin to secure your ticket.
+    </p>
   </div>
-</section>
+
+  <div class="warning" id="warningBox" style="display:none">
+    ⚠️ You have not sent this order to the admin yet.  
+    Please send it now to avoid losing your ticket.
+  </div>
+
+  <div class="card info" id="buyerInfo"></div>
+
+  <div class="card" id="ticketSummary"></div>
+
+  <div class="card info" id="orderInfo"></div>
+
+  <div class="actions">
+    <button class="home-btn" onclick="location.href='index.html'">Back to Home</button>
+    <button class="send-btn" onclick="sendToWhatsApp()">Send to Admin</button>
+  </div>
+
+</main>
 
 <script>
-const API_BASE = 'https://okizz.onrender.com';
-const ADMIN_PHONE = "2349122054068"; 
+  const badge = document.getElementById("notifyBadge");
 
-const orderId = new URLSearchParams(window.location.search).get("order");
+  if(localStorage.getItem("pendingAdminOrder")){
+    badge.style.display = "block";
+  }
 
-async function loadOrder(){
-  const res = await fetch(`${API_BASE}/api/orders/${orderId}`);
-  const order = await res.json();
+  const order = JSON.parse(localStorage.getItem("lastOrder"));
 
-  document.getElementById("orderMeta").innerHTML = `
+  if(!order){
+    alert("No order found");
+    location.href = "index.html";
+  }
+
+  document.getElementById("buyerInfo").innerHTML = `
+    <h2>Buyer Details</h2>
     <p><strong>Name:</strong> ${order.name}</p>
-    <p><strong>Phone:</strong> ${order.phone}</p>
     <p><strong>Email:</strong> ${order.email}</p>
-    <p><strong>Order ID:</strong> ${order._id}</p>
+    <p><strong>Phone:</strong> ${order.phone}</p>
   `;
 
-  let total = 0;
-  order.items.forEach(i => {
-    total += i.price * i.quantity;
-    document.getElementById("tickets").innerHTML += `
+  let ticketsHTML = `<h2>Tickets Bought</h2>`;
+  order.tickets.forEach(t => {
+    ticketsHTML += `
       <div class="ticket">
-        <img src="${i.image}">
-        <div>
-          <strong>${i.name}</strong><br>
-          Qty: ${i.quantity}<br>
-          ₦${(i.price * i.quantity).toLocaleString()}
+        <img src="${t.image}">
+        <div class="ticket-details">
+          <strong>${t.name}</strong>
+          <span>Ticket ID: ${t.ticketId}</span>
+          <span>Quantity: ${t.quantity}</span>
+          <div class="price">₦${(t.price * t.quantity).toLocaleString()}</div>
         </div>
       </div>
     `;
   });
 
-  document.getElementById("totalAmount").textContent =
-    `Total Paid: ₦${total.toLocaleString()}`;
+  document.getElementById("ticketSummary").innerHTML = ticketsHTML;
 
-  if(localStorage.getItem("pendingAdminOrder") === orderId){
-    document.getElementById("warningBox").style.display = "block";
-    document.getElementById("notifyBadge").style.display = "block";
-  }
-}
+  document.getElementById("orderInfo").innerHTML = `
+    <h2>Order Info</h2>
+    <p><strong>Order ID:</strong> ${order.orderId}</p>
+    <p><strong>Total:</strong> ₦${order.total.toLocaleString()}</p>
+  `;
 
-function sendToAdmin(){
-  const text = `New Ticket Order\nOrder ID: ${orderId}`;
-  window.open(`https://wa.me/${ADMIN_PHONE}?text=${encodeURIComponent(text)}`);
-
-  localStorage.removeItem("pendingAdminOrder");
-  document.getElementById("notifyBadge").style.display = "none";
-  document.getElementById("warningBox").style.display = "none";
-}
-
-function goToPending(){
   if(localStorage.getItem("pendingAdminOrder")){
-    location.href = `thank-you.html?order=${localStorage.getItem("pendingAdminOrder")}`;
+    document.getElementById("warningBox").style.display = "block";
   }
-}
 
-loadOrder();
+  function sendToWhatsApp(){
+    let message = `NEW TICKET ORDER%0A%0A`;
+    message += `Name: ${order.name}%0A`;
+    message += `Email: ${order.email}%0A`;
+    message += `Phone: ${order.phone}%0A`;
+    message += `Order ID: ${order.orderId}%0A%0A`;
+
+    order.tickets.forEach(t => {
+      message += `Ticket: ${t.name}%0A`;
+      message += `Ticket ID: ${t.ticketId}%0A`;
+      message += `Quantity: ${t.quantity}%0A`;
+      message += `Price: ₦${(t.price * t.quantity).toLocaleString()}%0A%0A`;
+    });
+
+    const adminPhone = "2349122054068"; 
+    window.open(`https://wa.me/${adminPhone}?text=${message}`, "_blank");
+
+    localStorage.removeItem("pendingAdminOrder");
+    badge.style.display = "none";
+    document.getElementById("warningBox").style.display = "none";
+  }
 </script>
 
 </body>
