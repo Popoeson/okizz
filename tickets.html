@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tickets • OKIZZ Concert</title>
+
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Inter:wght@400;500,600&display=swap" rel="stylesheet">
+
+<!-- Font Awesome -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+<style>
+:root{
+  --bg-main:#F5F0E1;
+  --text-dark:#2A2A2A;
+  --accent-olive:#6B8E23;
+}
+
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:"Inter",sans-serif;background:var(--bg-main);color:var(--text-dark);}
+a{text-decoration:none;color:inherit;}
+h1,h2,h3{font-family:"Playfair Display",serif;}
+.page-content.blur{filter:blur(5px);}
+
+/* HEADER */
+header{
+  position:fixed; top:0; width:100%;
+  background:rgba(255,255,255,0.96); z-index:1000;
+  box-shadow:0 2px 6px rgba(0,0,0,0.05);
+}
+.header-top{
+  display:flex; justify-content:space-between; align-items:center;
+  padding:16px 24px;
+}
+.logo{font-size:22px; letter-spacing:2px; font-weight:600;}
+.cart-btn{position:relative; cursor:pointer;}
+.cart-btn span{
+  position:absolute; top:-6px; right:-8px;
+  background:var(--accent-olive); color:#fff; font-size:10px;
+  padding:2px 6px; border-radius:50%;
+}
+
+/* FIX HEADER OVERLAP */
+.header-spacer{height:70px;}
+
+/* TICKETS GRID */
+.section{padding:20px 16px 60px; max-width:1200px; margin:auto;}
+.product-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:20px;
+}
+.product-card{
+  background:#fff;
+  border-radius:12px;
+  overflow:hidden;
+  box-shadow:0 3px 10px rgba(0,0,0,0.05);
+}
+.product-card img{
+  width:100%;
+  height:180px;
+  object-fit:cover;
+}
+.product-info{padding:12px;}
+.product-info h3{font-size:0.95rem; margin-bottom:4px;}
+.product-info p{font-size:0.8rem; margin-bottom:6px; color:#555;}
+.product-info span{color:var(--accent-olive); font-weight:600; font-size:0.85rem;}
+.product-info button{
+  width:100%;
+  margin-top:6px; padding:8px;
+  border:none; border-radius:999px;
+  background:var(--accent-olive); color:#fff;
+  font-size:0.8rem; cursor:pointer;
+}
+
+/* CART */
+.cart-overlay{
+  position:fixed; inset:0; background:rgba(0,0,0,0.35);
+  display:none; z-index:1100;
+}
+.cart-overlay.show{display:block;}
+.cart-drawer{
+  position:fixed; top:0; right:0;
+  width:360px; height:100%; background:#fff; padding:20px;
+  box-shadow:-6px 0 20px rgba(0,0,0,0.1);
+  transform:translateX(100%); transition:0.3s; z-index:1200;
+}
+.cart-drawer.open{transform:translateX(0);}
+.cart-close-btn{
+  position:absolute; top:16px; right:16px; font-size:1.2rem;
+  background:none; border:none; cursor:pointer;
+}
+.cart-items{
+  max-height:60vh; overflow:auto;
+}
+.cart-item{
+  background:#fafafa; border-radius:14px; padding:12px;
+  display:grid; grid-template-columns:70px 1fr; gap:12px; margin-bottom:14px;
+}
+.cart-item img{width:70px; height:70px; border-radius:10px; object-fit:cover;}
+.qty-controls button{width:26px; height:26px; border:none; border-radius:50%; cursor:pointer;}
+.item-total{color:var(--accent-olive); font-weight:600;}
+
+/* MOBILE */
+@media(max-width:768px){ .product-grid{grid-template-columns:repeat(2,1fr);} }
+
+</style>
+</head>
+
+<body>
+
+<header>
+  <div class="header-top">
+    <div class="logo">OKIZZ Concert</div>
+    <div class="cart-btn" onclick="toggleCart()">
+      <i class="fa-solid fa-bag-shopping"></i>
+      <span id="cartCount">0</span>
+    </div>
+  </div>
+</header>
+
+<div class="header-spacer"></div>
+
+<div class="page-content" id="pageContent">
+  <section class="section">
+    <h2>Available Tickets</h2>
+    <div class="product-grid" id="productGrid"></div>
+  </section>
+</div>
+
+<div class="cart-overlay" id="cartOverlay"></div>
+<div class="cart-drawer" id="cartDrawer">
+  <button class="cart-close-btn" onclick="closeCart()">×</button>
+  <h3>Your Cart</h3>
+  <div class="cart-items" id="cartItems"></div>
+  <div id="cartTotal"></div>
+  <a href="checkout.html" class="checkout-btn">Checkout</a>
+</div>
+
+<script>
+const API_BASE = 'https://okizz.onrender.com';
+// CART LOGIC
+const cartDrawer = document.getElementById('cartDrawer');
+const cartOverlay = document.getElementById('cartOverlay');
+const pageContent = document.getElementById('pageContent');
+const productGrid = document.getElementById('productGrid');
+const cartCount = document.getElementById('cartCount');
+const cartItems = document.getElementById('cartItems');
+const cartTotal = document.getElementById('cartTotal');
+
+let cart = JSON.parse(localStorage.getItem('cart')) || [];
+
+// Update cart UI
+function saveCart(){ localStorage.setItem('cart', JSON.stringify(cart)); }
+function updateCartCount(){ cartCount.textContent = cart.reduce((sum,i)=>sum+i.quantity,0); }
+function renderCart(){
+  cartItems.innerHTML='';
+  let total=0;
+  cart.forEach(i=>{
+    const t=i.price*i.quantity; total+=t;
+    cartItems.innerHTML+=`
+      <div class="cart-item">
+        <img src="${i.image}">
+        <div>
+          <strong>${i.name}</strong>
+          <div class="qty-controls">
+            <button onclick="changeQty('${i._id}',-1)">−</button>
+            <span>${i.quantity}</span>
+            <button onclick="changeQty('${i._id}',1)">+</button>
+          </div>
+          <div class="item-total">₦${t.toLocaleString()}</div>
+        </div>
+      </div>
+    `;
+  });
+  cartTotal.textContent=`Total: ₦${total.toLocaleString()}`;
+}
+function addToCart(product){
+  const existing=cart.find(i=>i._id===product._id);
+  existing?existing.quantity++:cart.push({...product,quantity:1});
+  saveCart(); updateCartCount(); renderCart();
+}
+function changeQty(id,delta){
+  const item=cart.find(i=>i._id===id);
+  if(!item) return;
+  item.quantity+=delta;
+  if(item.quantity<=0) cart=cart.filter(i=>i._id!==id);
+  saveCart(); updateCartCount(); renderCart();
+}
+function toggleCart(){
+  cartDrawer.classList.toggle('open');
+  cartOverlay.classList.toggle('show');
+  pageContent.classList.toggle('blur');
+  renderCart();
+}
+function closeCart(){
+  cartDrawer.classList.remove('open');
+  cartOverlay.classList.remove('show');
+  pageContent.classList.remove('blur');
+}
+cartOverlay.onclick=closeCart;
+
+// FETCH TICKETS AND RENDER
+async function fetchTickets(){
+  try {
+    const res=await fetch(`${API_BASE}/api/tickets`);
+    const tickets=await res.json();
+    productGrid.innerHTML='';
+    tickets.forEach(t=>{
+      productGrid.innerHTML+=`
+        <div class="product-card">
+          <img src="${t.image}">
+          <div class="product-info">
+            <h3>${t.name}</h3>
+            <p>${t.description}</p>
+            <span>₦${Number(t.price).toLocaleString()}</span>
+            <button onclick='addToCart(${JSON.stringify(t)})'>Buy Ticket</button>
+          </div>
+        </div>
+      `;
+    });
+  } catch(e){ console.error('Failed to fetch tickets',e); }
+}
+
+// INIT
+updateCartCount();
+fetchTickets();
+</script>
+</body>
+</html>
