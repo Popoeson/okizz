@@ -529,48 +529,99 @@ async function fetchHeroes(){
 // ===============================
 // FEATURED TICKETS (CAROUSEL)
 // ===============================
-let autoScrollInterval;
 let currentIndex = 0;
-let cardWidth = 0;
+let autoScrollInterval = null;
 let isUserInteracting = false;
 
-async function fetchFeaturedTickets(){
-  try {
-    const res = await fetch(`${API_BASE}/api/tickets`);
-    const tickets = await res.json();
-    const track = document.getElementById('featuredTrack');
+function activateCard(index, smooth = true){
+  const track = document.getElementById('featuredTrack');
+  const cards = [...track.children];
+  if (!cards[index]) return;
 
-    track.innerHTML = '';
+  cards.forEach(c => c.classList.remove('active'));
+  cards[index].classList.add('active');
 
-    tickets.forEach(t => {
-      track.innerHTML += `
-        <div class="product-card">
-          <img src="${t.image}">
-          <div class="product-info">
-            <h3>${t.name}</h3>
-            <p style="font-size:0.8rem">${t.description}</p>
-            <span>₦${t.price.toLocaleString()}</span>
-            <button onclick='addToCart(${JSON.stringify(t)})'>Buy Ticket</button>
-          </div>
-        </div>
-      `;
-    });
+  cards[index].scrollIntoView({
+    behavior: smooth ? "smooth" : "auto",
+    inline: "center",
+    block: "nearest"
+  });
 
-    requestAnimationFrame(() => {
-      calculateCardWidth();
-      activateCard(0);
-      startAutoplay();
-      enableTouchScroll();
-    });
+  currentIndex = index;
+}
 
-    window.addEventListener('resize', () => {
-      calculateCardWidth();
-      activateCard(currentIndex);
-    });
+function startAutoplay(){
+  stopAutoplay();
+  const cards = document.getElementById('featuredTrack').children;
+  if (!cards.length) return;
 
-  } catch (err) {
-    console.error('Ticket fetch failed', err);
+  autoScrollInterval = setInterval(() => {
+    if (isUserInteracting) return;
+    activateCard((currentIndex + 1) % cards.length);
+  }, 3500);
+}
+
+function stopAutoplay(){
+  if (autoScrollInterval) {
+    clearInterval(autoScrollInterval);
+    autoScrollInterval = null;
   }
+}
+
+function enableTouchScroll(){
+  const track = document.getElementById('featuredTrack');
+  let startX = 0;
+  let scrollStart = 0;
+
+  track.addEventListener('pointerdown', e => {
+    isUserInteracting = true;
+    stopAutoplay();
+    startX = e.pageX;
+    scrollStart = track.scrollLeft;
+    track.setPointerCapture(e.pointerId);
+  });
+
+  track.addEventListener('pointermove', e => {
+    if (!isUserInteracting) return;
+    track.scrollLeft = scrollStart + (startX - e.pageX);
+  });
+
+  track.addEventListener('pointerup', () => {
+    isUserInteracting = false;
+    snapToClosestCard();
+    startAutoplay();
+  });
+}
+
+function snapToClosestCard(){
+  const track = document.getElementById('featuredTrack');
+  const cards = [...track.children];
+  const trackCenter = track.getBoundingClientRect().left + track.offsetWidth / 2;
+
+  let closest = 0;
+  let min = Infinity;
+
+  cards.forEach((c, i) => {
+    const rect = c.getBoundingClientRect();
+    const center = rect.left + rect.width / 2;
+    const dist = Math.abs(trackCenter - center);
+    if (dist < min) {
+      min = dist;
+      closest = i;
+    }
+  });
+
+  activateCard(closest);
+}
+
+function initCarousel(){
+  const track = document.getElementById('featuredTrack');
+  if (!track.children.length) return;
+
+  currentIndex = 0;
+  activateCard(0, false);
+  enableTouchScroll();
+  startAutoplay();
 }
 
 // ===============================
