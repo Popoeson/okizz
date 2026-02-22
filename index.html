@@ -347,47 +347,65 @@ document.getElementById('cartOverlay')?.addEventListener('click', closeCart);
 // ===============================
 async function fetchHeroes(){
   try {
-    const res = await fetch(`${API_BASE}/api/hero`);
+    const res = await fetch(`${API_BASE}/api/heroes`);
+    if (!res.ok) throw new Error("Hero fetch failed");
 
-    if (!res.ok) {
-      console.error("Hero API error:", await res.text());
-      return;
-    }
+    const data = await res.json();
+    console.log("Hero API response:", data);
 
-    const heroes = await res.json();
+    // ✅ NORMALIZE RESPONSE
+    const heroes = Array.isArray(data)
+      ? data
+      : data.heroes || data.data || [];
 
     const heroSection = document.getElementById('heroSection');
     if (!heroSection) return;
 
-    // remove old images (important on reload)
+    // remove old hero images
     heroSection.querySelectorAll("img").forEach(img => img.remove());
 
     const activeHeroes = heroes.filter(h => h.isActive === true);
-    if (!activeHeroes.length) return;
+
+    // ✅ FALLBACK IMAGE (VERY IMPORTANT)
+    if (!activeHeroes.length) {
+      const fallback = document.createElement('img');
+      fallback.src = "https://images.unsplash.com/photo-1507874457470-272b3c8d8ee2";
+      fallback.classList.add('active');
+      heroSection.insertBefore(fallback, heroSection.firstChild);
+      return;
+    }
 
     let index = 0;
 
     activeHeroes.forEach((h, i) => {
       const img = document.createElement('img');
 
-      // ✅ FIX FIELD NAME HERE
-      img.src = h.image || h.imageUrl;
+      img.src =
+        h.image ||
+        h.imageUrl ||
+        h.imagePath ||
+        h.url ||
+        h.secure_url;
+
+      if (!img.src) return;
 
       if (i === 0) img.classList.add('active');
 
-      // insert BEFORE hero-content so overlay stays on top
       heroSection.insertBefore(img, heroSection.firstChild);
     });
 
+    // ✅ ROTATION
     setInterval(() => {
       const images = heroSection.querySelectorAll('img');
+      if (!images.length) return;
+
       images.forEach(img => img.classList.remove('active'));
       images[index].classList.add('active');
       index = (index + 1) % images.length;
     }, 5000);
 
   } catch (err) {
-    console.error('Hero fetch failed:', err);
+    console.error('Hero error:', err);
   }
 }
 
