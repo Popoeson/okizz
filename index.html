@@ -343,31 +343,46 @@ document.getElementById('cartOverlay')?.addEventListener('click', closeCart);
 async function fetchHeroes(){
   try {
     const res = await fetch(`${API_BASE}/api/heroes`);
+
+    if (!res.ok) {
+      console.error("Hero API error:", await res.text());
+      return;
+    }
+
     const heroes = await res.json();
 
     const heroSection = document.getElementById('heroSection');
-    const active = heroes.filter(h => h.isActive);
+    if (!heroSection) return;
 
-    if (!active.length) return;
+    // remove old images (important on reload)
+    heroSection.querySelectorAll("img").forEach(img => img.remove());
+
+    const activeHeroes = heroes.filter(h => h.isActive === true);
+    if (!activeHeroes.length) return;
 
     let index = 0;
 
-    active.forEach((h, i) => {
+    activeHeroes.forEach((h, i) => {
       const img = document.createElement('img');
-      img.src = h.image;
+
+      // ✅ FIX FIELD NAME HERE
+      img.src = h.image || h.imageUrl;
+
       if (i === 0) img.classList.add('active');
-      heroSection.appendChild(img);
+
+      // insert BEFORE hero-content so overlay stays on top
+      heroSection.insertBefore(img, heroSection.firstChild);
     });
 
     setInterval(() => {
       const images = heroSection.querySelectorAll('img');
-      images.forEach(i => i.classList.remove('active'));
+      images.forEach(img => img.classList.remove('active'));
       images[index].classList.add('active');
       index = (index + 1) % images.length;
     }, 5000);
 
   } catch (err) {
-    console.error('Hero fetch failed', err);
+    console.error('Hero fetch failed:', err);
   }
 }
 
