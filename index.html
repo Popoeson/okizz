@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OKIZZ Concert</title>
+
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Inter:wght@400;500,600&display=swap" rel="stylesheet">
+
+<!-- Font Awesome -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+<style>
+:root{
+  --bg-main:#F5F0E1;
+  --text-dark:#2A2A2A;
+  --accent-olive:#6B8E23;
+}
+
+/* ==========================
+   GLOBAL
+========================== */
+*{margin:0; padding:0; box-sizing:border-box;}
+body{font-family:"Inter",sans-serif; background:var(--bg-main); color:var(--text-dark);}
+a{text-decoration:none; color:inherit;}
+h1,h2,h3{font-family:"Playfair Display",serif;}
+.page-content.blur{filter:blur(5px);}
+
+/* ==========================
+   HEADER
+========================== */
+header{
+  position:fixed; top:0; width:100%;
+  background:rgba(255,255,255,0.96);
+  z-index:1000; box-shadow:0 2px 6px rgba(0,0,0,0.05);
+}
+.header-top{
+  display:flex; justify-content:space-between; align-items:center; padding:16px 24px;
+}
+.logo{font-size:22px; letter-spacing:2px; font-weight:600;}
+.cart-btn{position:relative; cursor:pointer;}
+.cart-btn span{
+  position:absolute; top:-6px; right:-8px;
+  background:var(--accent-olive); color:#fff; font-size:10px;
+  padding:2px 6px; border-radius:50%;
+}
+
+/* ==========================
+   HERO
+========================== */
+.hero{
+  margin-top:60px; height:80vh; position:relative; overflow:hidden;
+}
+.hero img{
+  position:absolute; inset:0; width:100%; height:100%;
+  object-fit:cover; opacity:0; transition:1s; z-index:1;
+}
+.hero img.active{opacity:1;}
+.hero-content{
+  position:absolute; inset:0; display:flex; flex-direction:column;
+  justify-content:center; align-items:center; text-align:center;
+  color:#fff; background:linear-gradient(rgba(0,0,0,0.25), rgba(0,0,0,0.55));
+  z-index:2; padding:20px;
+}
+.hero-content h1{font-size:2.2rem; margin-bottom:10px;}
+.hero-content p{font-size:0.95rem; max-width:520px;}
+.hero-content .btn{
+  margin-top:18px; padding:12px 30px; border-radius:999px;
+  border:none; background:var(--accent-olive); color:#fff;
+  cursor:pointer; font-weight:500;
+}
+
+/* ==========================
+   FEATURED / TICKETS
+========================== */
+.section{padding:60px 16px; max-width:1200px; margin:auto;}
+.section h2{text-align:center; font-size:1.6rem; margin-bottom:32px;}
+
+.product-card{
+  background:#fff; border-radius:12px; overflow:hidden;
+  box-shadow:0 3px 10px rgba(0,0,0,0.05);
+}
+.product-card img{width:100%; height:180px; object-fit:cover;}
+.product-info{padding:12px;}
+.product-info h3{font-size:0.95rem; margin-bottom:6px;}
+.product-info p{font-size:0.8rem; margin-bottom:6px; color:#555;}
+.product-info span{color:var(--accent-olive); font-weight:600; font-size:0.85rem;}
+.product-info button{
+  width:100%; margin-top:8px; padding:8px; border:none;
+  border-radius:999px; background:var(--accent-olive);
+  color:#fff; font-size:0.8rem; cursor:pointer;
+}
+
+/* ==========================
+   FEATURED CAROUSEL
+========================== */
+.featured-wrapper{
+  position:relative;
+  max-width:1200px;
+  margin:auto;
+  overflow:hidden;
+}
+.featured-track{
+  display:flex;
+  gap:20px;
+  scroll-behavior:smooth;
+  overflow-x:auto;
+  padding:20px 0;
+  scrollbar-width:none;
+}
+.featured-track::-webkit-scrollbar{display:none;}
+
+.featured-track .product-card{
+  min-width:220px;
+  flex-shrink:0;
+  transform:scale(0.85);
+  opacity:0.6;
+  transition:0.4s;
+}
+.featured-track .product-card.active{
+  transform:scale(1.05);
+  opacity:1;
+}
+
+/* arrows */
+.carousel-btn{
+  position:absolute;
+  top:50%;
+  transform:translateY(-50%);
+  width:44px;
+  height:44px;
+  border-radius:50%;
+  border:none;
+  background:var(--accent-olive);
+  color:#fff;
+  font-size:1.5rem;
+  cursor:pointer;
+  z-index:10;
+}
+.carousel-btn.left{left:-10px;}
+.carousel-btn.right{right:-10px;}
+
+/* ==========================
+   FOOTER
+========================== */
+.footer{
+  background:#1f1f1f; color:#ddd;
+  padding:40px 6% 25px;
+  text-align:center;
+}
+.footer h4{font-size:0.95rem; margin-bottom:10px; color:#fff;}
+.footer p{font-size:0.85rem; color:#bbb;}
+.footer-bottom{
+  margin-top:20px;
+  font-size:0.7rem;
+  color:#888;
+}
+
+/* ==========================
+   MOBILE
+========================== */
+@media(max-width:768px){
+  .featured-track .product-card{min-width:85%;}
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <div class="header-top">
+    <div class="logo">OKIZZ Concert</div>
+
+    <div class="cart-btn" onclick="toggleCart()">
+      <i class="fa-solid fa-bag-shopping"></i>
+      <span id="cartCount">0</span>
+    </div>
+  </div>
+</header>
+
+<!-- PAGE CONTENT -->
+<div class="page-content" id="pageContent">
+
+<!-- HERO -->
+<section class="hero" id="heroSection">
+  <div class="hero-content">
+    <h1>Feel the Rhythm. Live the Moment.</h1>
+    <p>
+      Experience unforgettable nights of music, energy, and entertainment.
+      Secure your spot at the hottest concert in town.
+    </p>
+    <button class="btn" onclick="document.querySelector('.section').scrollIntoView({behavior:'smooth'})">
+      Buy Ticket
+    </button>
+  </div>
+</section>
+
+<!-- FEATURED TICKETS -->
+<section class="section">
+  <h2>Featured Artistes</h2>
+
+  <div class="featured-wrapper">
+    <button class="carousel-btn left" id="prevBtn">‹</button>
+    <div class="featured-track" id="featuredTrack"></div>
+    <button class="carousel-btn right" id="nextBtn">›</button>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <h4>Contact</h4>
+  <p>📞 +234 800 000 0000</p>
+
+  <div class="footer-bottom">
+    © 2026 OKIZZ Concert. All rights reserved.
+  </div>
+</footer>
+
+</div>
+
+<!-- CART OVERLAY -->
+<div class="cart-overlay" id="cartOverlay"></div>
+
+<!-- CART DRAWER -->
+<div class="cart-drawer" id="cartDrawer">
+  <button class="cart-close-btn" onclick="closeCart()">×</button>
+  <h3>Your Cart</h3>
+  <div class="cart-items" id="cartItems"></div>
+  <div class="cart-total" id="cartTotal"></div>
+  <a href="checkout.html" class="checkout-btn">Checkout</a>
+</div>
+
+<script>
+// ===============================
+// CONFIG
+// ===============================
+const API_BASE = 'https://okizz.onrender.com';
+
+// ===============================
+// STATE
+// ===============================
+let cart = JSON.parse(localStorage.getItem('cart')) || [];
+
+// ===============================
+// HELPERS
+// ===============================
+function updateCartCount(){
+  const count = cart.reduce((sum, item) => sum + item.quantity, 0);
+  document.getElementById('cartCount').textContent = count;
+}
+
+function saveCart(){
+  localStorage.setItem('cart', JSON.stringify(cart));
+}
+
+// ===============================
+// CART LOGIC
+// ===============================
+function addToCart(ticket){
+  const existing = cart.find(i => i._id === ticket._id);
+
+  if (existing) {
+    existing.quantity++;
+  } else {
+    cart.push({ ...ticket, quantity: 1 });
+  }
+
+  saveCart();
+  updateCartCount();
+  renderCart();
+}
+
+function changeQty(id, delta){
+  const item = cart.find(i => i._id === id);
+  if (!item) return;
+
+  item.quantity += delta;
+  if (item.quantity <= 0) {
+    cart = cart.filter(i => i._id !== id);
+  }
+
+  saveCart();
+  updateCartCount();
+  renderCart();
+}
+
+function renderCart(){
+  const cartItems = document.getElementById('cartItems');
+  const cartTotal = document.getElementById('cartTotal');
+
+  cartItems.innerHTML = '';
+  let total = 0;
+
+  cart.forEach(item => {
+    const itemTotal = item.price * item.quantity;
+    total += itemTotal;
+
+    cartItems.innerHTML += `
+      <div class="cart-item">
+        <img src="${item.image}">
+        <div>
+          <strong>${item.name}</strong>
+          <div class="item-price">₦${item.price} per ticket</div>
+
+          <div class="cart-item-footer">
+            <div class="qty-controls">
+              <button onclick="changeQty('${item._id}', -1)">−</button>
+              <span>${item.quantity}</span>
+              <button onclick="changeQty('${item._id}', 1)">+</button>
+            </div>
+            <div class="item-total">₦${itemTotal.toLocaleString()}</div>
+          </div>
+        </div>
+      </div>
+    `;
+  });
+
+  cartTotal.textContent = `Total: ₦${total.toLocaleString()}`;
+}
+
+// ===============================
+// CART UI
+// ===============================
+function toggleCart(){
+  document.getElementById('cartDrawer').classList.toggle('open');
+  document.getElementById('cartOverlay').classList.toggle('show');
+  document.getElementById('pageContent').classList.toggle('blur');
+  renderCart();
+}
+
+function closeCart(){
+  document.getElementById('cartDrawer').classList.remove('open');
+  document.getElementById('cartOverlay').classList.remove('show');
+  document.getElementById('pageContent').classList.remove('blur');
+}
+
+document.getElementById('cartOverlay')?.addEventListener('click', closeCart);
+
+// ===============================
+// HERO CAROUSEL (ADMIN HERO)
+// ===============================
+async function fetchHeroes(){
+  try {
+    const res = await fetch(`${API_BASE}/api/heroes`);
+    const heroes = await res.json();
+
+    const heroSection = document.getElementById('heroSection');
+    const active = heroes.filter(h => h.isActive);
+
+    if (!active.length) return;
+
+    let index = 0;
+
+    active.forEach((h, i) => {
+      const img = document.createElement('img');
+      img.src = h.image;
+      if (i === 0) img.classList.add('active');
+      heroSection.appendChild(img);
+    });
+
+    setInterval(() => {
+      const images = heroSection.querySelectorAll('img');
+      images.forEach(i => i.classList.remove('active'));
+      images[index].classList.add('active');
+      index = (index + 1) % images.length;
+    }, 5000);
+
+  } catch (err) {
+    console.error('Hero fetch failed', err);
+  }
+}
+
+// ===============================
+// FEATURED TICKETS (CAROUSEL)
+// ===============================
+let autoScrollInterval;
+let currentIndex = 0;
+let cardWidth = 0;
+let isUserInteracting = false;
+
+async function fetchFeaturedTickets(){
+  try {
+    const res = await fetch(`${API_BASE}/api/tickets`);
+    const tickets = await res.json();
+    const track = document.getElementById('featuredTrack');
+
+    track.innerHTML = '';
+
+    tickets.forEach(t => {
+      track.innerHTML += `
+        <div class="product-card">
+          <img src="${t.image}">
+          <div class="product-info">
+            <h3>${t.name}</h3>
+            <p style="font-size:0.8rem">${t.description}</p>
+            <span>₦${t.price.toLocaleString()}</span>
+            <button onclick='addToCart(${JSON.stringify(t)})'>Buy Ticket</button>
+          </div>
+        </div>
+      `;
+    });
+
+    requestAnimationFrame(() => {
+      calculateCardWidth();
+      activateCard(0);
+      startAutoplay();
+      enableTouchScroll();
+    });
+
+    window.addEventListener('resize', () => {
+      calculateCardWidth();
+      activateCard(currentIndex);
+    });
+
+  } catch (err) {
+    console.error('Ticket fetch failed', err);
+  }
+}
+
+// ===============================
+// CAROUSEL HELPERS
+// ===============================
+function calculateCardWidth(){
+  const track = document.getElementById('featuredTrack');
+  const card = track.querySelector('.product-card');
+  if (!card) return;
+  cardWidth = card.offsetWidth + 20;
+}
+
+function activateCard(index, smooth = true){
+  const track = document.getElementById('featuredTrack');
+  const cards = [...track.children];
+  if (!cards[index]) return;
+
+  cards.forEach(c => c.classList.remove('active'));
+  cards[index].classList.add('active');
+
+  const center = cards[index].offsetLeft + cards[index].offsetWidth / 2;
+  track.scrollTo({
+    left: center - track.offsetWidth / 2,
+    behavior: smooth ? 'smooth' : 'auto'
+  });
+
+  currentIndex = index;
+}
+
+function startAutoplay(){
+  stopAutoplay();
+  autoScrollInterval = setInterval(() => {
+    if (isUserInteracting) return;
+    activateCard((currentIndex + 1) % document.getElementById('featuredTrack').children.length);
+  }, 3500);
+}
+
+function stopAutoplay(){
+  if (autoScrollInterval) clearInterval(autoScrollInterval);
+}
+
+function enableTouchScroll(){
+  const track = document.getElementById('featuredTrack');
+  let startX, scrollStart;
+
+  track.addEventListener('pointerdown', e => {
+    isUserInteracting = true;
+    stopAutoplay();
+    startX = e.pageX;
+    scrollStart = track.scrollLeft;
+    track.setPointerCapture(e.pointerId);
+  });
+
+  track.addEventListener('pointermove', e => {
+    if (!isUserInteracting) return;
+    track.scrollLeft = scrollStart + (startX - e.pageX);
+  });
+
+  track.addEventListener('pointerup', () => {
+    isUserInteracting = false;
+    startAutoplay();
+    snapToClosestCard();
+  });
+}
+
+function snapToClosestCard(){
+  const track = document.getElementById('featuredTrack');
+  const cards = [...track.children];
+  const center = track.scrollLeft + track.offsetWidth / 2;
+
+  let closest = 0;
+  let min = Infinity;
+
+  cards.forEach((c, i) => {
+    const dist = Math.abs(center - (c.offsetLeft + c.offsetWidth / 2));
+    if (dist < min) {
+      min = dist;
+      closest = i;
+    }
+  });
+
+  activateCard(closest);
+}
+
+// ===============================
+// ARROWS
+// ===============================
+document.getElementById('prevBtn')?.addEventListener('click', () => {
+  activateCard(currentIndex - 1 < 0 ? document.getElementById('featuredTrack').children.length - 1 : currentIndex - 1);
+});
+
+document.getElementById('nextBtn')?.addEventListener('click', () => {
+  activateCard((currentIndex + 1) % document.getElementById('featuredTrack').children.length);
+});
+
+// ===============================
+// INIT
+// ===============================
+updateCartCount();
+fetchHeroes();
+fetchFeaturedTickets();
+</script>
+</body>
+</html>
