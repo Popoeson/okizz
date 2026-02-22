@@ -42,7 +42,7 @@ const upload = multer({ storage });
    SCHEMAS
 ===================== */
 
-// 🎟 Ticket Schema
+// 🎟 Ticket
 const ticketSchema = new mongoose.Schema(
   {
     image: String,
@@ -52,10 +52,9 @@ const ticketSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-
 const Ticket = mongoose.model("Ticket", ticketSchema);
 
-// 🎤 Artiste Schema
+// 🎤 Artiste
 const artisteSchema = new mongoose.Schema(
   {
     image: String,
@@ -63,12 +62,9 @@ const artisteSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-
 const Artiste = mongoose.model("Artiste", artisteSchema);
 
-/* =====================
-   HERO SCHEMA
-===================== */
+// 🖼 Hero
 const heroSchema = new mongoose.Schema(
   {
     image: String,
@@ -76,12 +72,9 @@ const heroSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-
 const Hero = mongoose.model("Hero", heroSchema);
 
-/* =====================
-   ORDER SCHEMA
-===================== */
+// 🧾 Order
 const orderSchema = new mongoose.Schema(
   {
     name: String,
@@ -101,8 +94,8 @@ const orderSchema = new mongoose.Schema(
     ],
 
     totalAmount: Number,
-
     paymentReference: String,
+
     paymentStatus: {
       type: String,
       enum: ["pending", "paid", "failed"],
@@ -114,225 +107,178 @@ const orderSchema = new mongoose.Schema(
 
 const Order = mongoose.model("Order", orderSchema);
 
-
 /* =====================
-   ROUTES
+   TICKETS ROUTES
 ===================== */
-
-/* -------- TICKETS -------- */
-
-// Create Ticket
 app.post("/api/tickets", upload.single("image"), async (req, res) => {
   try {
     const { name, description, price } = req.body;
-
-    if (!req.file)
-      return res.status(400).json({ error: "Image is required" });
 
     const uploadRes = await cloudinary.uploader.upload(
       `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`,
       { folder: "concert_tickets" }
     );
 
-    const ticket = new Ticket({
+    const ticket = await Ticket.create({
       image: uploadRes.secure_url,
       name,
       description,
       price
     });
 
-    await ticket.save();
     res.status(201).json(ticket);
   } catch (err) {
-    console.error(err);
     res.status(500).json({ error: "Failed to create ticket" });
   }
 });
 
-// Get All Tickets
 app.get("/api/tickets", async (req, res) => {
-  const tickets = await Ticket.find().sort({ createdAt: -1 });
-  res.json(tickets);
+  res.json(await Ticket.find().sort({ createdAt: -1 }));
 });
 
-// Delete Ticket
+app.put("/api/tickets/:id", upload.single("image"), async (req, res) => {
+  let update = req.body;
+  if (req.file) {
+    const uploadRes = await cloudinary.uploader.upload(
+      `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`,
+      { folder: "concert_tickets" }
+    );
+    update.image = uploadRes.secure_url;
+  }
+  res.json(await Ticket.findByIdAndUpdate(req.params.id, update, { new: true }));
+});
+
 app.delete("/api/tickets/:id", async (req, res) => {
   await Ticket.findByIdAndDelete(req.params.id);
   res.json({ success: true });
 });
 
-/* -------- ARTISTES -------- */
-
-// Create Artiste
+/* =====================
+   ARTISTES ROUTES
+===================== */
 app.post("/api/artistes", upload.single("image"), async (req, res) => {
-  try {
-    const { name } = req.body;
+  const uploadRes = await cloudinary.uploader.upload(
+    `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`,
+    { folder: "concert_artistes" }
+  );
 
-    if (!req.file)
-      return res.status(400).json({ error: "Image is required" });
-
-    const uploadRes = await cloudinary.uploader.upload(
-      `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`,
-      { folder: "concert_artistes" }
-    );
-
-    const artiste = new Artiste({
-      image: uploadRes.secure_url,
-      name
-    });
-
-    await artiste.save();
-    res.status(201).json(artiste);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to create artiste" });
-  }
+  res.status(201).json(
+    await Artiste.create({ image: uploadRes.secure_url, name: req.body.name })
+  );
 });
 
-// Get All Artistes
 app.get("/api/artistes", async (req, res) => {
-  const artistes = await Artiste.find().sort({ createdAt: -1 });
-  res.json(artistes);
+  res.json(await Artiste.find().sort({ createdAt: -1 }));
 });
-
-// Delete Artiste
-app.delete("/api/artistes/:id", async (req, res) => {
-  await Artiste.findByIdAndDelete(req.params.id);
-  res.json({ success: true });
-});
-
-// Update Ticket
-app.put("/api/tickets/:id", upload.single("image"), async (req,res)=>{
-  const { name, description, price } = req.body;
-  let updateData = { name, description, price };
-
-  if(req.file){
-    const uploadRes = await cloudinary.uploader.upload(`data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`, { folder: "concert_tickets" });
-    updateData.image = uploadRes.secure_url;
-  }
-
-  const ticket = await Ticket.findByIdAndUpdate(req.params.id, updateData, { new: true });
-  res.json(ticket);
-});
-
-// Update Artiste
-app.put("/api/artistes/:id", upload.single("image"), async (req,res)=>{
-  const { name } = req.body;
-  let updateData = { name };
-
-  if(req.file){
-    const uploadRes = await cloudinary.uploader.upload(`data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`, { folder: "concert_artistes" });
-    updateData.image = uploadRes.secure_url;
-  }
-
-  const artiste = await Artiste.findByIdAndUpdate(req.params.id, updateData, { new: true });
-  res.json(artiste);
-});
-
 
 /* =====================
    HERO ROUTES
 ===================== */
 const heroRouter = express.Router();
-const heroUpload = upload.single("image");
 
-// GET all hero images
-heroRouter.get("/", async (req, res) => {
+heroRouter.get("/", async (_, res) => {
+  res.json(await Hero.find().sort({ createdAt: -1 }));
+});
+
+heroRouter.post("/", upload.single("image"), async (req, res) => {
+  const uploadRes = await cloudinary.uploader.upload(
+    `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`,
+    { folder: "concert_hero" }
+  );
+
+  res.status(201).json(await Hero.create({ image: uploadRes.secure_url }));
+});
+
+heroRouter.patch("/:id/toggle", async (req, res) => {
+  const hero = await Hero.findById(req.params.id);
+  await Hero.updateMany({}, { active: false });
+  hero.active = !hero.active;
+  await hero.save();
+  res.json(hero);
+});
+
+app.use("/api/hero", heroRouter);
+
+/* =====================
+   CHECKOUT & PAYSTACK
+===================== */
+
+// CREATE ORDER
+app.post("/api/orders", async (req, res) => {
   try {
-    const heroes = await Hero.find().sort({ createdAt: -1 });
-    res.json(heroes);
+    const { name, phone, email, items } = req.body;
+
+    let total = 0;
+    items.forEach(i => (total += i.price * i.quantity));
+
+    const order = await Order.create({
+      name,
+      phone,
+      email,
+      items,
+      totalAmount: total
+    });
+
+    res.json(order);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to fetch hero images" });
+    res.status(500).json({ error: "Failed to create order" });
   }
 });
 
-// GET single hero by ID
-heroRouter.get("/:id", async (req, res) => {
+// INITIALIZE PAYMENT
+app.post("/api/paystack/init", async (req, res) => {
   try {
-    const hero = await Hero.findById(req.params.id);
-    if (!hero) return res.status(404).json({ error: "Hero not found" });
-    res.json(hero);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to fetch hero" });
-  }
-});
+    const { email, amount, orderId } = req.body;
 
-// CREATE new hero image
-heroRouter.post("/", heroUpload, async (req, res) => {
-  try {
-    if (!req.file) return res.status(400).json({ error: "Image required" });
-
-    const uploadRes = await cloudinary.uploader.upload(
-      `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`,
-      { folder: "concert_hero" }
+    const response = await axios.post(
+      "https://api.paystack.co/transaction/initialize",
+      {
+        email,
+        amount: amount * 100,
+        metadata: { orderId }
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`
+        }
+      }
     );
 
-    const hero = new Hero({ image: uploadRes.secure_url });
-    await hero.save();
-    res.status(201).json(hero);
+    res.json(response.data);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to create hero image" });
+    res.status(500).json({ error: "Payment init failed" });
   }
 });
 
-// UPDATE hero image (replace)
-heroRouter.put("/:id", heroUpload, async (req, res) => {
+// VERIFY PAYMENT
+app.get("/api/paystack/verify/:reference", async (req, res) => {
   try {
-    const hero = await Hero.findById(req.params.id);
-    if (!hero) return res.status(404).json({ error: "Hero not found" });
+    const response = await axios.get(
+      `https://api.paystack.co/transaction/verify/${req.params.reference}`,
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`
+        }
+      }
+    );
 
-    if (req.file) {
-      const uploadRes = await cloudinary.uploader.upload(
-        `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`,
-        { folder: "concert_hero" }
+    const data = response.data.data;
+
+    if (data.status === "success") {
+      await Order.findOneAndUpdate(
+        { _id: data.metadata.orderId },
+        {
+          paymentStatus: "paid",
+          paymentReference: data.reference
+        }
       );
-      hero.image = uploadRes.secure_url;
     }
 
-    await hero.save();
-    res.json(hero);
+    res.json(response.data);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to update hero image" });
+    res.status(500).json({ error: "Verification failed" });
   }
 });
-
-// DELETE hero image
-heroRouter.delete("/:id", async (req, res) => {
-  try {
-    await Hero.findByIdAndDelete(req.params.id);
-    res.json({ success: true });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to delete hero image" });
-  }
-});
-
-// TOGGLE hero activation
-heroRouter.patch("/:id/toggle", async (req, res) => {
-  try {
-    const hero = await Hero.findById(req.params.id);
-    if (!hero) return res.status(404).json({ error: "Hero not found" });
-
-    // If activating, optionally deactivate others
-    if (!hero.active) {
-      await Hero.updateMany({}, { active: false });
-    }
-
-    hero.active = !hero.active;
-    await hero.save();
-    res.json(hero);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to toggle hero" });
-  }
-});
-
-// Mount heroRouter
-app.use("/api/hero", heroRouter);
 
 /* =====================
    SERVER
