@@ -527,12 +527,48 @@ async function fetchHeroes(){
 }
 
 // ===============================
-// FEATURED TICKETS (CAROUSEL)
+// FEATURED ARTISTES CAROUSEL
 // ===============================
 let currentIndex = 0;
 let autoScrollInterval = null;
 let isUserInteracting = false;
 
+// Fetch artistes from your backend and inject into the carousel
+async function fetchFeaturedArtistes(){
+  try {
+    const res = await fetch(`${API_BASE}/api/artistes`);
+    const artistes = await res.json();
+    const track = document.getElementById('featuredTrack');
+
+    track.innerHTML = '';
+
+    artistes.forEach(a => {
+      track.innerHTML += `
+        <div class="product-card">
+          <img src="${a.image}" alt="${a.name}">
+          <div class="product-info">
+            <h3>${a.name}</h3>
+          </div>
+        </div>
+      `;
+    });
+
+    // Wait for DOM paint, then initialize carousel
+    requestAnimationFrame(() => {
+      initCarousel();
+    });
+
+    // Recalculate center on resize
+    window.addEventListener('resize', () => {
+      activateCard(currentIndex, false);
+    });
+
+  } catch (err) {
+    console.error('Failed to fetch artistes', err);
+  }
+}
+
+// Activate a single card in the center
 function activateCard(index, smooth = true){
   const track = document.getElementById('featuredTrack');
   const cards = [...track.children];
@@ -550,6 +586,7 @@ function activateCard(index, smooth = true){
   currentIndex = index;
 }
 
+// Autoplay
 function startAutoplay(){
   stopAutoplay();
   const cards = document.getElementById('featuredTrack').children;
@@ -568,6 +605,7 @@ function stopAutoplay(){
   }
 }
 
+// Drag / touch scroll
 function enableTouchScroll(){
   const track = document.getElementById('featuredTrack');
   let startX = 0;
@@ -593,6 +631,7 @@ function enableTouchScroll(){
   });
 }
 
+// Snap carousel to closest card after drag
 function snapToClosestCard(){
   const track = document.getElementById('featuredTrack');
   const cards = [...track.children];
@@ -614,6 +653,7 @@ function snapToClosestCard(){
   activateCard(closest);
 }
 
+// Initialize carousel
 function initCarousel(){
   const track = document.getElementById('featuredTrack');
   if (!track.children.length) return;
@@ -623,6 +663,22 @@ function initCarousel(){
   enableTouchScroll();
   startAutoplay();
 }
+
+// Optional: Next / Prev buttons
+document.getElementById('prevBtn').addEventListener('click', () => {
+  const cards = document.getElementById('featuredTrack').children;
+  if (!cards.length) return;
+  activateCard((currentIndex - 1 + cards.length) % cards.length);
+});
+
+document.getElementById('nextBtn').addEventListener('click', () => {
+  const cards = document.getElementById('featuredTrack').children;
+  if (!cards.length) return;
+  activateCard((currentIndex + 1) % cards.length);
+});
+
+// Call this to fetch artistes and initialize everything
+fetchFeaturedArtistes();
 
 // ===============================
 // CAROUSEL HELPERS
