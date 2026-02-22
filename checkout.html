@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Checkout • Okizz Concert</title>
+
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Inter:wght@400;500,600&display=swap" rel="stylesheet">
+
+<!-- Font Awesome -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+<style>
+:root{
+  --bg-main:#F5F0E1;
+  --text-dark:#2A2A2A;
+  --accent-olive:#6B8E23;
+}
+
+*{margin:0;padding:0;box-sizing:border-box;}
+body{
+  font-family:"Inter",sans-serif;
+  background:var(--bg-main);
+  color:var(--text-dark);
+}
+h1,h2,h3{font-family:"Playfair Display",serif;}
+
+header{
+  position:fixed;
+  top:0;
+  width:100%;
+  background:rgba(255,255,255,0.96);
+  z-index:1000;
+  box-shadow:0 2px 6px rgba(0,0,0,0.05);
+}
+.header-top{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:16px 24px;
+}
+.logo{font-size:22px;letter-spacing:2px;}
+.cart-btn{position:relative;cursor:pointer;}
+.cart-btn span{
+  position:absolute;
+  top:-6px; right:-8px;
+  background:var(--accent-olive);
+  color:#fff;
+  font-size:10px;
+  padding:2px 6px;
+  border-radius:50%;
+}
+
+.header-spacer{height:70px;}
+
+/* PAGE LAYOUT */
+.page-content{
+  max-width:900px;
+  margin:auto;
+  padding:20px 16px 60px;
+}
+
+.checkout-section{
+  display:flex;
+  flex-wrap:wrap;
+  gap:24px;
+}
+
+.checkout-form, .order-summary{
+  background:#fff;
+  border-radius:12px;
+  padding:20px;
+  box-shadow:0 3px 10px rgba(0,0,0,0.05);
+  flex:1 1 400px;
+}
+
+.checkout-form h2, .order-summary h2{
+  margin-bottom:16px;
+}
+
+.checkout-form label{
+  display:block;
+  margin:8px 0 4px;
+  font-size:0.9rem;
+}
+
+.checkout-form input{
+  width:100%;
+  padding:10px;
+  border-radius:8px;
+  border:1px solid #ccc;
+  margin-bottom:12px;
+  font-size:0.9rem;
+}
+
+.order-item{
+  display:flex;
+  justify-content:space-between;
+  margin-bottom:8px;
+}
+
+.order-total{
+  margin-top:12px;
+  font-weight:600;
+  font-size:1rem;
+  color:var(--accent-olive);
+  border-top:1px solid #eee;
+  padding-top:8px;
+}
+
+.paystack-btn{
+  margin-top:20px;
+  display:block;
+  width:100%;
+  padding:12px;
+  background:var(--accent-olive);
+  color:#fff;
+  font-size:1rem;
+  border:none;
+  border-radius:999px;
+  cursor:pointer;
+}
+
+@media(max-width:768px){
+  .checkout-section{flex-direction:column;}
+}
+</style>
+</head>
+
+<body>
+<header>
+  <div class="header-top">
+    <div class="logo">MAISON</div>
+    <div class="cart-btn" onclick="window.location.href='tickets.html'">
+      <i class="fa-solid fa-bag-shopping"></i>
+      <span id="cartCount">0</span>
+    </div>
+  </div>
+</header>
+
+<div class="header-spacer"></div>
+
+<div class="page-content">
+  <div class="checkout-section">
+    <div class="checkout-form">
+      <h2>Checkout</h2>
+      <label for="name">Full Name</label>
+      <input type="text" id="name" placeholder="John Doe" required>
+
+      <label for="phone">Phone Number</label>
+      <input type="tel" id="phone" placeholder="+234..." required>
+
+      <label for="email">Email Address</label>
+      <input type="email" id="email" placeholder="example@mail.com" required>
+
+      <button class="paystack-btn" id="payBtn">Pay Now</button>
+    </div>
+
+    <div class="order-summary">
+      <h2>Order Summary</h2>
+      <div id="orderItems"></div>
+      <div class="order-total" id="orderTotal"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Paystack JS -->
+<script src="https://js.paystack.co/v1/inline.js"></script>
+
+<script>
+// CART & ORDER LOGIC
+let cart = JSON.parse(localStorage.getItem('cart')) || [];
+
+const cartCount = document.getElementById('cartCount');
+const orderItems = document.getElementById('orderItems');
+const orderTotal = document.getElementById('orderTotal');
+
+function updateCartCount(){
+  cartCount.textContent = cart.reduce((sum,i)=>sum+i.quantity,0);
+}
+
+function renderOrder(){
+  orderItems.innerHTML = '';
+  let total = 0;
+
+  cart.forEach(item=>{
+    const itemTotal = item.price * item.quantity;
+    total += itemTotal;
+    orderItems.innerHTML += `
+      <div class="order-item">
+        <span>${item.name} x${item.quantity}</span>
+        <span>₦${itemTotal.toLocaleString()}</span>
+      </div>
+    `;
+  });
+
+  orderTotal.textContent = `Total: ₦${total.toLocaleString()}`;
+}
+
+updateCartCount();
+renderOrder();
+
+// PAYSTACK INTEGRATION
+document.getElementById('payBtn').addEventListener('click', function(){
+  const name = document.getElementById('name').value.trim();
+  const phone = document.getElementById('phone').value.trim();
+  const email = document.getElementById('email').value.trim();
+
+  if(!name || !phone || !email){
+    alert('Please fill all fields');
+    return;
+  }
+
+  const totalAmount = cart.reduce((sum,i)=>sum+i.price*i.quantity,0) * 100; // in kobo
+
+  if(totalAmount <= 0){
+    alert('Your cart is empty');
+    return;
+  }
+
+  let handler = PaystackPop.setup({
+    key: 'YOUR_PAYSTACK_PUBLIC_KEY', // replace with your Paystack public key
+    email: email,
+    amount: totalAmount,
+    currency: 'NGN',
+    ref: 'ORD' + Math.floor(Math.random()*1000000),
+    metadata: {
+      custom_fields: [
+        { display_name: "Full Name", variable_name:"name", value: name },
+        { display_name: "Phone Number", variable_name:"phone", value: phone }
+      ]
+    },
+    callback: function(response){
+      alert('Payment successful! Reference: ' + response.reference);
+      localStorage.removeItem('cart');
+      window.location.href = 'thankyou.html';
+    },
+    onClose: function(){
+      alert('Payment cancelled.');
+    }
+  });
+
+  handler.openIframe();
+});
+</script>
+</body>
+</html>
