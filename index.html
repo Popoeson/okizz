@@ -342,7 +342,7 @@ document.getElementById('cartOverlay')?.addEventListener('click', closeCart);
 // ===============================
 async function fetchHeroes(){
   try {
-    const res = await fetch(`${API_BASE}/api/heroes`);
+    const res = await fetch(`${API_BASE}/api/hero`);
 
     if (!res.ok) {
       console.error("Hero API error:", await res.text());
