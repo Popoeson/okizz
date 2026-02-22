@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Thank You • OKIZZ Concert</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+<style>
+:root{
+  --bg:#0f0f0f;
+  --card:#181818;
+  --accent:#25d366;
+  --text:#fff;
+  --muted:#aaa;
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:Inter,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+}
+
+header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:16px 20px;
+}
+
+.logo{
+  font-family:"Playfair Display",serif;
+  font-size:20px;
+}
+
+.notify{
+  position:relative;
+  cursor:pointer;
+}
+
+.notify span{
+  position:absolute;
+  top:-6px;
+  right:-6px;
+  background:red;
+  color:#fff;
+  font-size:10px;
+  padding:2px 6px;
+  border-radius:50%;
+  display:none;
+}
+
+.section{
+  max-width:800px;
+  margin:40px auto;
+  padding:20px;
+}
+
+.card{
+  background:var(--card);
+  border-radius:14px;
+  padding:20px;
+}
+
+h1{
+  font-family:"Playfair Display",serif;
+  margin-bottom:10px;
+}
+
+.order-meta p{
+  font-size:0.9rem;
+  margin:6px 0;
+  color:var(--muted);
+}
+
+.ticket{
+  display:flex;
+  gap:12px;
+  margin-top:16px;
+  background:#111;
+  padding:12px;
+  border-radius:12px;
+}
+
+.ticket img{
+  width:70px;
+  height:70px;
+  border-radius:10px;
+  object-fit:cover;
+}
+
+.ticket strong{font-size:0.9rem}
+
+.total{
+  margin-top:16px;
+  font-weight:600;
+  color:var(--accent);
+}
+
+.warning{
+  margin-top:16px;
+  background:#3a1d1d;
+  padding:12px;
+  border-radius:10px;
+  font-size:0.85rem;
+}
+
+.actions{
+  display:flex;
+  gap:10px;
+  margin-top:20px;
+}
+
+.actions button{
+  flex:1;
+  padding:12px;
+  border:none;
+  border-radius:999px;
+  font-size:0.85rem;
+  cursor:pointer;
+}
+
+.send-btn{background:var(--accent);color:#000}
+.home-btn{background:#333;color:#fff}
+</style>
+</head>
+
+<body>
+
+<header>
+  <div class="logo">OKIZZ Concert</div>
+
+  <div class="notify" onclick="goToPending()">
+    <i class="fa-solid fa-bell"></i>
+    <span id="notifyBadge">1</span>
+  </div>
+</header>
+
+<section class="section">
+  <div class="card" id="orderBox">
+    <h1>Thank You for Your Purchase 🎉</h1>
+
+    <div class="order-meta" id="orderMeta"></div>
+
+    <div id="tickets"></div>
+
+    <div class="total" id="totalAmount"></div>
+
+    <div class="warning" id="warningBox" style="display:none">
+      ⚠ Please send your order to admin to confirm your ticket.
+    </div>
+
+    <div class="actions">
+      <button class="send-btn" onclick="sendToAdmin()">Send to Admin</button>
+      <button class="home-btn" onclick="location.href='index.html'">Back to Home</button>
+    </div>
+  </div>
+</section>
+
+<script>
+const API_BASE = "https://your-backend-url.com";
+const ADMIN_PHONE = "2348012345678"; // WhatsApp number
+
+const orderId = new URLSearchParams(window.location.search).get("order");
+
+async function loadOrder(){
+  const res = await fetch(`${API_BASE}/api/orders/${orderId}`);
+  const order = await res.json();
+
+  document.getElementById("orderMeta").innerHTML = `
+    <p><strong>Name:</strong> ${order.name}</p>
+    <p><strong>Phone:</strong> ${order.phone}</p>
+    <p><strong>Email:</strong> ${order.email}</p>
+    <p><strong>Order ID:</strong> ${order._id}</p>
+  `;
+
+  let total = 0;
+  order.items.forEach(i => {
+    total += i.price * i.quantity;
+    document.getElementById("tickets").innerHTML += `
+      <div class="ticket">
+        <img src="${i.image}">
+        <div>
+          <strong>${i.name}</strong><br>
+          Qty: ${i.quantity}<br>
+          ₦${(i.price * i.quantity).toLocaleString()}
+        </div>
+      </div>
+    `;
+  });
+
+  document.getElementById("totalAmount").textContent =
+    `Total Paid: ₦${total.toLocaleString()}`;
+
+  if(localStorage.getItem("pendingAdminOrder") === orderId){
+    document.getElementById("warningBox").style.display = "block";
+    document.getElementById("notifyBadge").style.display = "block";
+  }
+}
+
+function sendToAdmin(){
+  const text = `New Ticket Order\nOrder ID: ${orderId}`;
+  window.open(`https://wa.me/${ADMIN_PHONE}?text=${encodeURIComponent(text)}`);
+
+  localStorage.removeItem("pendingAdminOrder");
+  document.getElementById("notifyBadge").style.display = "none";
+  document.getElementById("warningBox").style.display = "none";
+}
+
+function goToPending(){
+  if(localStorage.getItem("pendingAdminOrder")){
+    location.href = `thank-you.html?order=${localStorage.getItem("pendingAdminOrder")}`;
+  }
+}
+
+loadOrder();
+</script>
+
+</body>
+</html>
