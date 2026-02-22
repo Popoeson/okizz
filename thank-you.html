@@ -255,6 +255,15 @@ h1{
     badge.style.display = "none";
     document.getElementById("warningBox").style.display = "none";
   }
+
+// Warn before leaving if order not sent
+window.addEventListener("beforeunload", function (e) {
+  if (localStorage.getItem("pendingAdminOrder") === orderId) {
+    e.preventDefault();
+    e.returnValue =
+      "Please send your order to admin on WhatsApp to avoid losing your ticket.";
+  }
+});
 </script>
 
 </body>
