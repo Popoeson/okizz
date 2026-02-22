@@ -219,45 +219,41 @@ header{
   font-size:1.2rem;
 }
 
-.cart-items{
-  flex:1;
-  overflow-y:auto;
-  padding-right:6px;
+.cart-item {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+  align-items: flex-start; /* aligns image and content to top */
 }
 
-.cart-item{
-  display:flex;
-  gap:10px;
-  margin-bottom:14px;
+.cart-item-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
-.cart-item img{
-  width:64px;
-  height:64px;
-  object-fit:cover;
-  border-radius:8px;
+.cart-item strong {
+  font-size: 0.85rem;
+  margin-bottom: 4px;
 }
 
-.cart-item strong{
-  font-size:0.85rem;
+.qty-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
 }
 
-.item-price{
-  font-size:0.75rem;
-  color:#555;
+.item-price {
+  font-size: 0.75rem;
+  color: var(--accent-olive); /* green color */
+  font-weight: 600;
 }
-
 .cart-item-footer{
   display:flex;
   justify-content:space-between;
   align-items:center;
   margin-top:6px;
-}
-
-.qty-controls{
-  display:flex;
-  align-items:center;
-  gap:6px;
 }
 
 .qty-controls button{
@@ -431,24 +427,20 @@ function renderCart(){
     total += itemTotal;
 
     cartItems.innerHTML += `
-      <div class="cart-item">
-        <img src="${item.image}">
-        <div>
-          <strong>${item.name}</strong>
-          <div class="item-price">₦${item.price} per ticket</div>
-
-          <div class="cart-item-footer">
-            <div class="qty-controls">
-              <button onclick="changeQty('${item._id}', -1)">−</button>
-              <span>${item.quantity}</span>
-              <button onclick="changeQty('${item._id}', 1)">+</button>
-            </div>
-            <div class="item-total">₦${itemTotal.toLocaleString()}</div>
-          </div>
-        </div>
+      cartItems.innerHTML += `
+  <div class="cart-item">
+    <img src="${i.image}" alt="${i.name}">
+    <div class="cart-item-content">
+      <strong>${i.name}</strong>
+      <div class="qty-controls">
+        <button onclick="changeQty('${i._id}',-1)">−</button>
+        <span>${i.quantity}</span>
+        <button onclick="changeQty('${i._id}',1)">+</button>
       </div>
-    `;
-  });
+      <div class="item-price">₦${t.toLocaleString()}</div>
+    </div>
+  </div>
+`;
 
   cartTotal.textContent = `Total: ₦${total.toLocaleString()}`;
 }
