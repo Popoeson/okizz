@@ -427,20 +427,20 @@ function renderCart(){
     total += itemTotal;
 
     cartItems.innerHTML += `
-      cartItems.innerHTML += `
-  <div class="cart-item">
-    <img src="${i.image}" alt="${i.name}">
-    <div class="cart-item-content">
-      <strong>${i.name}</strong>
-      <div class="qty-controls">
-        <button onclick="changeQty('${i._id}',-1)">−</button>
-        <span>${i.quantity}</span>
-        <button onclick="changeQty('${i._id}',1)">+</button>
+      <div class="cart-item">
+        <img src="${item.image}" alt="${item.name}">
+        <div class="cart-item-content">
+          <strong>${item.name}</strong>
+          <div class="qty-controls">
+            <button onclick="changeQty('${item._id}', -1)">−</button>
+            <span>${item.quantity}</span>
+            <button onclick="changeQty('${item._id}', 1)">+</button>
+          </div>
+          <div class="item-price">₦${itemTotal.toLocaleString()}</div>
+        </div>
       </div>
-      <div class="item-price">₦${t.toLocaleString()}</div>
-    </div>
-  </div>
-`;
+    `;
+  });
 
   cartTotal.textContent = `Total: ₦${total.toLocaleString()}`;
 }
