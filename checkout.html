@@ -169,6 +169,44 @@ header{
 <script src="https://js.paystack.co/v1/inline.js"></script>
 
 <script>
+
+// ===============================
+// NOTIFICATION BADGE LOGIC
+// ===============================
+const headerTop = document.querySelector('.header-top');
+if(headerTop){
+  const notifyBtn = document.createElement('div');
+  notifyBtn.id = 'notifyBtn';
+  notifyBtn.style.position = 'relative';
+  notifyBtn.style.cursor = 'pointer';
+  notifyBtn.style.marginLeft = '16px';
+  notifyBtn.innerHTML = `<i class="fa-solid fa-bell"></i>
+                         <span id="notifyBadge" style="
+                           display:none;
+                           position:absolute;
+                           top:-6px;
+                           right:-6px;
+                           background:red;
+                           color:#fff;
+                           font-size:10px;
+                           padding:2px 6px;
+                           border-radius:50%;
+                         ">!</span>`;
+  headerTop.appendChild(notifyBtn);
+
+  // Show badge if pending admin order exists
+  const badge = document.getElementById("notifyBadge");
+  if(localStorage.getItem("pendingAdminOrder")){
+    badge.style.display = "block";
+  }
+
+  // Redirect to thank-you page on click
+  notifyBtn.addEventListener('click', ()=>{
+    const orderId = localStorage.getItem("pendingAdminOrder");
+    if(orderId) window.location.href = `thank-you.html?order=${orderId}`;
+  });
+}
+
 // ===============================
 // CART & ORDER LOGIC
 // ===============================
