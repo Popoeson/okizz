@@ -93,7 +93,7 @@ header{
 }
 
 /* ==========================
-   FEATURED CAROUSEL
+   FEATURED CAROUSEL (FIXED)
 ========================== */
 .featured-wrapper{
   position:relative;
@@ -101,28 +101,37 @@ header{
   margin:auto;
   overflow:hidden;
 }
+
 .featured-track{
   display:flex;
   gap:20px;
-  scroll-behavior:smooth;
+  padding:20px 50%;
   overflow-x:auto;
-  padding:20px 0;
+  scroll-behavior:smooth;
   scrollbar-width:none;
+
+  scroll-snap-type:x mandatory;
 }
-.featured-track::-webkit-scrollbar{display:none;}
+
+.featured-track::-webkit-scrollbar{
+  display:none;
+}
 
 .featured-track .product-card{
   min-width:220px;
   flex-shrink:0;
+
+  scroll-snap-align:center;
+
   transform:scale(0.85);
   opacity:0.6;
-  transition:0.4s;
+  transition:transform 0.4s ease, opacity 0.4s ease;
 }
+
 .featured-track .product-card.active{
   transform:scale(1.05);
   opacity:1;
 }
-
 /* arrows */
 .carousel-btn{
   position:absolute;
