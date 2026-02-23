@@ -66,11 +66,38 @@ header{
 .hero-content h1{font-size:2.2rem; margin-bottom:10px;}
 .hero-content p{font-size:0.95rem; max-width:520px;}
 .hero-content .btn{
-  margin-top:18px; padding:12px 30px; border-radius:999px;
-  border:none; background:var(--accent-olive); color:#fff;
-  cursor:pointer; font-weight:500;
-}
+  margin-top:18px;
+  padding:12px 34px;
+  border-radius:999px;
 
+  /* Wine glass color */
+  background: rgba(128, 0, 32, 0.55); /* wine */
+  color:#fff;
+
+  /* Glassmorphism */
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.25);
+
+  box-shadow:
+    0 8px 24px rgba(128, 0, 32, 0.35),
+    inset 0 1px 1px rgba(255,255,255,0.35);
+
+  cursor:pointer;
+  font-weight:500;
+  letter-spacing:0.6px;
+  transition: all 0.3s ease;
+}
+.hero-content .btn:hover{
+  background: rgba(128, 0, 32, 0.75);
+  transform: translateY(-2px);
+  box-shadow:
+    0 12px 32px rgba(128, 0, 32, 0.45),
+    inset 0 1px 1px rgba(255,255,255,0.45);
+}
+.hero-content .btn:active{
+  transform: scale(0.97);
+}
 /* ==========================
    FEATURED / TICKETS
 ========================== */
