@@ -216,73 +216,107 @@ h1,h2{
   </div>
 
 </main>
-
 <script>
+/* ===============================
+   ADMIN BADGE + WARNING
+================================ */
 const badge = document.getElementById("notifyBadge");
+const warningBox = document.getElementById("warningBox");
 
-if(localStorage.getItem("pendingAdminOrder")==="true"){
-  badge.style.display="block";
-  document.getElementById("warningBox").style.display="block";
+const pendingOrderRef = localStorage.getItem("pendingAdminOrder");
+if (pendingOrderRef) {
+  badge.style.display = "block";
+  warningBox.style.display = "block";
 }
 
+/* ===============================
+   FETCH ORDER
+================================ */
 const order = JSON.parse(localStorage.getItem("lastOrder"));
-if(!order){
-  location.href="index.html";
+
+if (!order || !order.items || order.items.length === 0) {
+  alert("No order has been placed yet.");
+  document.getElementById("sendWhatsAppBtn")?.setAttribute("disabled", true);
+  throw new Error("No valid order found");
 }
 
-document.getElementById("buyerInfo").innerHTML=`
+/* ===============================
+   BUYER DETAILS
+================================ */
+document.getElementById("buyerInfo").innerHTML = `
   <h2>Buyer Details</h2>
   <p><strong>Name:</strong> ${order.name}</p>
   <p><strong>Email:</strong> ${order.email}</p>
   <p><strong>Phone:</strong> ${order.phone}</p>
 `;
 
-let html=`<h2>Tickets Bought</h2>`;
-order.tickets.forEach(t=>{
-  html+=`
-  <div class="ticket">
-    <img src="${t.image}">
-    <div class="ticket-details">
-      <strong>${t.name}</strong>
-      <span>Ticket ID: ${t.ticketId}</span>
-      <span>Quantity: ${t.quantity}</span>
-      <div class="price">₦${(t.price*t.quantity).toLocaleString()}</div>
-    </div>
-  </div>`;
-});
-document.getElementById("ticketSummary").innerHTML=html;
+/* ===============================
+   TICKET SUMMARY
+================================ */
+let ticketHTML = `<h2>Tickets Bought</h2>`;
 
-document.getElementById("orderInfo").innerHTML=`
+order.items.forEach(item => {
+  ticketHTML += `
+    <div class="ticket">
+      <div class="ticket-details">
+        <strong>${item.name}</strong>
+        <span>Quantity: ${item.quantity}</span>
+        <div class="price">₦${(item.price * item.quantity).toLocaleString()}</div>
+      </div>
+    </div>
+  `;
+});
+
+document.getElementById("ticketSummary").innerHTML = ticketHTML;
+
+/* ===============================
+   ORDER SUMMARY
+================================ */
+document.getElementById("orderInfo").innerHTML = `
   <h2>Order Summary</h2>
   <p><strong>Order ID:</strong> ${order.orderId}</p>
   <p class="total">Total: ₦${order.total.toLocaleString()}</p>
 `;
 
-function sendToWhatsApp(){
-  let msg=`OKIZZ TICKET ORDER%0A%0A`;
-  msg+=`Name: ${order.name}%0A`;
-  msg+=`Email: ${order.email}%0A`;
-  msg+=`Phone: ${order.phone}%0A`;
-  msg+=`Order ID: ${order.orderId}%0A%0A`;
+/* ===============================
+   SEND TO WHATSAPP (SAFE)
+================================ */
+function sendToWhatsApp() {
+  if (!order || !order.items || order.items.length === 0) {
+    alert("No order has been placed yet.");
+    return;
+  }
 
-  order.tickets.forEach(t=>{
-    msg+=`${t.name} | ID:${t.ticketId} | Qty:${t.quantity} | ₦${(t.price*t.quantity).toLocaleString()}%0A`;
+  let msg = `OKIZZ TICKET ORDER%0A%0A`;
+  msg += `Name: ${order.name}%0A`;
+  msg += `Email: ${order.email}%0A`;
+  msg += `Phone: ${order.phone}%0A`;
+  msg += `Order ID: ${order.orderId}%0A%0A`;
+
+  order.items.forEach(item => {
+    msg += `${item.name} | Qty:${item.quantity} | ₦${(item.price * item.quantity).toLocaleString()}%0A`;
   });
 
-  window.open(`https://wa.me/2349122054068?text=${msg}`,"_blank");
+  window.open(
+    `https://wa.me/2349122054068?text=${msg}`,
+    "_blank"
+  );
 
+  // Clear admin warning AFTER successful send
   localStorage.removeItem("pendingAdminOrder");
-  badge.style.display="none";
-  document.getElementById("warningBox").style.display="none";
+  badge.style.display = "none";
+  warningBox.style.display = "none";
 }
 
-window.addEventListener("beforeunload",e=>{
-  if(localStorage.getItem("pendingAdminOrder")==="true"){
+/* ===============================
+   WARN BEFORE EXIT IF UNSENT
+================================ */
+window.addEventListener("beforeunload", e => {
+  if (localStorage.getItem("pendingAdminOrder")) {
     e.preventDefault();
-    e.returnValue="";
+    e.returnValue = "";
   }
 });
 </script>
-
 </body>
 </html>
