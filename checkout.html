@@ -224,11 +224,14 @@ document.getElementById("payBtn").addEventListener("click", async () => {
   }
 
   try {
-    /* 1️⃣ CREATE ORDER IN DB */
+    // 🔹 Generate orderRef
+    const orderRef = `OKIZZ-${Date.now()}`;
+
+    // 1️⃣ CREATE ORDER IN DB
     const orderRes = await fetch(`${API_BASE}/api/orders`, {
       method: "POST",
       headers: { "Content-Type":"application/json" },
-      body: JSON.stringify({ name, phone, email, items: cart })
+      body: JSON.stringify({ name, phone, email, items: cart, orderRef })
     });
 
     const order = await orderRes.json();
@@ -237,30 +240,24 @@ document.getElementById("payBtn").addEventListener("click", async () => {
       return;
     }
 
-    /* 2️⃣ INIT PAYSTACK */
+    // 2️⃣ INIT PAYSTACK
     const handler = PaystackPop.setup({
       key: "pk_test_72e7641a30dcdbad32a51606354065cc5b62f20f",
       email: email,
       amount: order.totalAmount * 100,
       currency: "NGN",
-      ref: `OKIZZ-${Date.now()}`,
-
+      ref: orderRef, // ✅ use orderRef as transaction reference
       metadata: {
         custom_fields: [
-          {
-            display_name: "Order ID",
-            variable_name: "order_id",
-            value: order._id
-          }
+          { display_name: "Order Mongo ID", variable_name: "order_id", value: order._id }
         ]
       },
-
-      callback: function (response) {
-        // ⚠️ MUST NOT BE async
-        verifyPayment(response.reference, order._id);
+      callback: function(response){
+        // ⚠️ Must be synchronous function
+        // 3️⃣ VERIFY PAYMENT
+        verifyPayment(response.reference, order._id, orderRef);
       },
-
-      onClose: function () {
+      onClose: function(){
         alert("Payment cancelled");
       }
     });
@@ -276,9 +273,13 @@ document.getElementById("payBtn").addEventListener("click", async () => {
 /* ===============================
    VERIFY PAYMENT
 ================================ */
-async function verifyPayment(reference, orderId){
+async function verifyPayment(reference, orderId, orderRef){
   try {
     await fetch(`${API_BASE}/api/paystack/verify/${reference}`);
+
+    // ✅ Save order locally for thank-you page
+    const lastOrder = { _id: orderId, orderRef, items: cart };
+    localStorage.setItem("lastOrder", JSON.stringify(lastOrder));
 
     // ✅ Flag admin notification
     localStorage.setItem("pendingAdminOrder", orderId);
@@ -295,6 +296,5 @@ async function verifyPayment(reference, orderId){
   }
 }
 </script>
-
 </body>
 </html>
