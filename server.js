@@ -78,12 +78,13 @@ const orderSchema = new mongoose.Schema(
     ],
     totalAmount: Number,
     paymentReference: String,
-    paymentStatus: { type: String, enum: ["pending","paid","failed"], default: "pending" }
+    paymentStatus: { type: String, enum: ["pending","paid","failed"], default: "pending" },
+    orderRef: { type: String, unique: true }  
   },
   { timestamps: true }
 );
-const Order = mongoose.model("Order", orderSchema);
 
+const Order = mongoose.model("Order", orderSchema);
 /* =====================
    TICKETS ROUTES
 ===================== */
@@ -262,17 +263,37 @@ heroRouter.delete("/:id", async (req, res) => {
 app.use("/api/hero", heroRouter);
 
 /* =====================
-   CHECKOUT & PAYSTACK
+   CHECKOUT & PAYSTACK (Updated)
 ===================== */
+
 // CREATE ORDER
 app.post("/api/orders", async (req, res) => {
   try {
     const { name, phone, email, items } = req.body;
+
+    if (!name || !phone || !email || !items || items.length === 0) {
+      return res.status(400).json({ error: "Invalid order data" });
+    }
+
     let total = 0;
     items.forEach(i => (total += i.price * i.quantity));
-    const order = await Order.create({ name, phone, email, items, totalAmount: total });
+
+    // ✅ Generate human-friendly order reference
+    const orderRef = `OKIZZ-${Date.now()}`;
+
+    const order = await Order.create({
+      name,
+      phone,
+      email,
+      items,
+      totalAmount: total,
+      orderRef,       // save reference in DB
+      paymentStatus: "pending"
+    });
+
     res.json(order);
-  } catch {
+  } catch (error) {
+    console.error("Create order error:", error.message);
     res.status(500).json({ error: "Failed to create order" });
   }
 });
@@ -280,14 +301,30 @@ app.post("/api/orders", async (req, res) => {
 // INITIALIZE PAYMENT
 app.post("/api/paystack/init", async (req, res) => {
   try {
-    const { email, amount, orderId } = req.body;
+    const { email, amount, orderRef } = req.body;
+
+    if (!email || !amount || !orderRef) {
+      return res.status(400).json({ error: "Invalid payment data" });
+    }
+
     const response = await axios.post(
       "https://api.paystack.co/transaction/initialize",
-      { email, amount: amount * 100, metadata: { orderId } },
-      { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } }
+      {
+        email,
+        amount: amount * 100,
+        reference: orderRef,     // send our human-friendly ref
+        metadata: { orderRef }
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`
+        }
+      }
     );
+
     res.json(response.data);
-  } catch {
+  } catch (error) {
+    console.error("Paystack init error:", error.message);
     res.status(500).json({ error: "Payment init failed" });
   }
 });
@@ -306,33 +343,44 @@ app.get("/api/paystack/verify/:reference", async (req, res) => {
 
     const data = response.data.data;
 
-    // 🔐 SAFETY CHECK (your injected logic)
-    if (!data.metadata || !data.metadata.orderId) {
-      return res.status(400).json({
-        error: "Invalid payment metadata"
-      });
+    // 🔐 Safety check
+    if (!data.metadata || !data.metadata.orderRef) {
+      return res.status(400).json({ error: "Invalid payment metadata" });
     }
 
+    // ✅ Update order status
     if (data.status === "success") {
-      await Order.findByIdAndUpdate(
-        data.metadata.orderId,
+      const updatedOrder = await Order.findOneAndUpdate(
+        { orderRef: data.metadata.orderRef },
         {
           paymentStatus: "paid",
           paymentReference: data.reference
         },
         { new: true }
       );
+      return res.json({ success: true, order: updatedOrder });
     }
 
-    res.json(response.data);
-
+    res.json({ success: false, message: "Payment not successful", data });
   } catch (error) {
     console.error("Paystack verify error:", error.message);
     res.status(500).json({ error: "Verification failed" });
   }
 });
 
-// GET SINGLE ORDER
+// GET SINGLE ORDER BY REF (optional, easier for frontend)
+app.get("/api/orders/ref/:orderRef", async (req, res) => {
+  try {
+    const order = await Order.findOne({ orderRef: req.params.orderRef });
+    if (!order) return res.status(404).json({ error: "Order not found" });
+    res.json(order);
+  } catch (error) {
+    console.error("Fetch order error:", error.message);
+    res.status(500).json({ error: "Failed to fetch order" });
+  }
+});
+
+/* GET SINGLE ORDER
 app.get("/api/orders/:id", async (req, res) => {
   try {
     const order = await Order.findById(req.params.id);
@@ -341,7 +389,7 @@ app.get("/api/orders/:id", async (req, res) => {
   } catch {
     res.status(500).json({ error: "Failed to fetch order" });
   }
-});
+});*/
 
 /* =====================
    SERVER
