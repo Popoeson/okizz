@@ -175,7 +175,8 @@ const API_BASE = "https://okizz.onrender.com";
    CART
 ================================ */
 let cart = JSON.parse(localStorage.getItem("cart")) || [];
-const cartCount = document.getElementById("cartCount");
+
+const cartCount  = document.getElementById("cartCount");
 const orderItems = document.getElementById("orderItems");
 const orderTotal = document.getElementById("orderTotal");
 
@@ -186,6 +187,7 @@ function updateCartCount(){
 function renderOrder(){
   let total = 0;
   orderItems.innerHTML = "";
+
   cart.forEach(i=>{
     const t = i.price * i.quantity;
     total += t;
@@ -196,8 +198,10 @@ function renderOrder(){
       </div>
     `;
   });
+
   orderTotal.textContent = `Total: ₦${total.toLocaleString()}`;
 }
+
 updateCartCount();
 renderOrder();
 
@@ -209,47 +213,88 @@ document.getElementById("payBtn").addEventListener("click", async () => {
   const phone = document.getElementById("phone").value.trim();
   const email = document.getElementById("email").value.trim();
 
-  if(!name || !phone || !email) return alert("Fill all fields");
-  if(cart.length === 0) return alert("Cart empty");
+  if(!name || !phone || !email){
+    alert("Please fill all fields");
+    return;
+  }
 
-  /* 1️⃣ CREATE ORDER IN DB */
-  const orderRes = await fetch(`${API_BASE}/api/orders`, {
-    method: "POST",
-    headers: { "Content-Type":"application/json" },
-    body: JSON.stringify({ name, phone, email, items: cart })
-  });
-  const order = await orderRes.json();
-  if(!order._id) return alert("Order creation failed");
+  if(cart.length === 0){
+    alert("Your cart is empty");
+    return;
+  }
 
-  /* 2️⃣ INIT PAYSTACK */
-  const totalAmount = order.totalAmount * 100;
+  try {
+    /* 1️⃣ CREATE ORDER IN DB */
+    const orderRes = await fetch(`${API_BASE}/api/orders`, {
+      method: "POST",
+      headers: { "Content-Type":"application/json" },
+      body: JSON.stringify({ name, phone, email, items: cart })
+    });
 
-  const handler = PaystackPop.setup({
-    key: "pk_test_72e7641a30dcdbad32a51606354065cc5b62f20f",
-    email,
-    amount: totalAmount,
-    currency: "NGN",
-    ref: `OKIZZ-${Date.now()}`,
-    metadata: { orderId: order._id },
-
-    callback: async function(resp){
-      /* 3️⃣ VERIFY PAYMENT */
-      await fetch(`${API_BASE}/api/paystack/verify/${resp.reference}`);
-
-      /* 4️⃣ FLAG ADMIN PENDING */
-      localStorage.setItem("pendingAdminOrder", order._id);
-      localStorage.removeItem("cart");
-
-      window.location.href = `thank-you.html?order=${order._id}`;
-    },
-
-    onClose(){
-      alert("Payment cancelled");
+    const order = await orderRes.json();
+    if(!order._id){
+      alert("Failed to create order");
+      return;
     }
-  });
 
-  handler.openIframe();
+    /* 2️⃣ INIT PAYSTACK */
+    const handler = PaystackPop.setup({
+      key: "pk_test_72e7641a30dcdbad32a51606354065cc5b62f20f",
+      email: email,
+      amount: order.totalAmount * 100,
+      currency: "NGN",
+      ref: `OKIZZ-${Date.now()}`,
+
+      metadata: {
+        custom_fields: [
+          {
+            display_name: "Order ID",
+            variable_name: "order_id",
+            value: order._id
+          }
+        ]
+      },
+
+      callback: function (response) {
+        // ⚠️ MUST NOT BE async
+        verifyPayment(response.reference, order._id);
+      },
+
+      onClose: function () {
+        alert("Payment cancelled");
+      }
+    });
+
+    handler.openIframe();
+
+  } catch (err) {
+    console.error(err);
+    alert("Something went wrong. Please try again.");
+  }
 });
+
+/* ===============================
+   VERIFY PAYMENT
+================================ */
+async function verifyPayment(reference, orderId){
+  try {
+    await fetch(`${API_BASE}/api/paystack/verify/${reference}`);
+
+    // ✅ Flag admin notification
+    localStorage.setItem("pendingAdminOrder", orderId);
+
+    // ✅ Clear cart
+    localStorage.removeItem("cart");
+
+    // ✅ Redirect
+    window.location.href = `thank-you.html?order=${orderId}`;
+
+  } catch (err) {
+    console.error(err);
+    alert("Payment verification failed. Contact support.");
+  }
+}
 </script>
+
 </body>
 </html>
