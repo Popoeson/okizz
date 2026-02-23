@@ -217,84 +217,101 @@ h1,h2{
 
 </main>
 <script>
+const API_BASE = "https://okizz.onrender.com";
+
 /* ===============================
-   ADMIN BADGE + WARNING
+   GET ORDER ID FROM URL
+================================ */
+const params = new URLSearchParams(window.location.search);
+const orderId = params.get("order");
+
+if (!orderId) {
+  alert("No order found");
+  window.location.href = "index.html";
+}
+
+/* ===============================
+   NOTIFICATION BADGE
 ================================ */
 const badge = document.getElementById("notifyBadge");
-const warningBox = document.getElementById("warningBox");
-
-const pendingOrderRef = localStorage.getItem("pendingAdminOrder");
-if (pendingOrderRef) {
+if (localStorage.getItem("pendingAdminOrder") === orderId) {
   badge.style.display = "block";
-  warningBox.style.display = "block";
+  document.getElementById("warningBox").style.display = "block";
 }
 
 /* ===============================
-   FETCH ORDER
+   FETCH ORDER FROM BACKEND
 ================================ */
-const order = JSON.parse(localStorage.getItem("lastOrder"));
+async function loadOrder(){
+  try {
+    const res = await fetch(`${API_BASE}/api/orders/${orderId}`);
+    const order = await res.json();
 
-if (!order || !order.items || order.items.length === 0) {
-  alert("No order has been placed yet.");
-  document.getElementById("sendWhatsAppBtn")?.setAttribute("disabled", true);
-  throw new Error("No valid order found");
+    if (!order._id) {
+      alert("Order not found");
+      return;
+    }
+
+    /* BUYER INFO */
+    document.getElementById("buyerInfo").innerHTML = `
+      <h2>Buyer Details</h2>
+      <p><strong>Name:</strong> ${order.name}</p>
+      <p><strong>Email:</strong> ${order.email}</p>
+      <p><strong>Phone:</strong> ${order.phone}</p>
+    `;
+
+    /* TICKETS */
+    let ticketHTML = `<h2>Tickets Bought</h2>`;
+    order.items.forEach(t => {
+      ticketHTML += `
+        <div class="ticket">
+          <div class="ticket-details">
+            <strong>${t.name}</strong>
+            <span>Quantity: ${t.quantity}</span>
+            <div class="price">
+              ₦${(t.price * t.quantity).toLocaleString()}
+            </div>
+          </div>
+        </div>
+      `;
+    });
+    document.getElementById("ticketSummary").innerHTML = ticketHTML;
+
+    /* ORDER SUMMARY */
+    document.getElementById("orderInfo").innerHTML = `
+      <h2>Order Summary</h2>
+      <p><strong>Order ID:</strong> ${order._id}</p>
+      <p class="total">Total: ₦${order.totalAmount.toLocaleString()}</p>
+      <p>Status: <strong>${order.paymentStatus.toUpperCase()}</strong></p>
+    `;
+
+    window.currentOrder = order;
+
+  } catch (err) {
+    console.error(err);
+    alert("Failed to load order");
+  }
 }
 
-/* ===============================
-   BUYER DETAILS
-================================ */
-document.getElementById("buyerInfo").innerHTML = `
-  <h2>Buyer Details</h2>
-  <p><strong>Name:</strong> ${order.name}</p>
-  <p><strong>Email:</strong> ${order.email}</p>
-  <p><strong>Phone:</strong> ${order.phone}</p>
-`;
+loadOrder();
 
 /* ===============================
-   TICKET SUMMARY
+   SEND TO WHATSAPP
 ================================ */
-let ticketHTML = `<h2>Tickets Bought</h2>`;
-
-order.items.forEach(item => {
-  ticketHTML += `
-    <div class="ticket">
-      <div class="ticket-details">
-        <strong>${item.name}</strong>
-        <span>Quantity: ${item.quantity}</span>
-        <div class="price">₦${(item.price * item.quantity).toLocaleString()}</div>
-      </div>
-    </div>
-  `;
-});
-
-document.getElementById("ticketSummary").innerHTML = ticketHTML;
-
-/* ===============================
-   ORDER SUMMARY
-================================ */
-document.getElementById("orderInfo").innerHTML = `
-  <h2>Order Summary</h2>
-  <p><strong>Order ID:</strong> ${order.orderId}</p>
-  <p class="total">Total: ₦${order.total.toLocaleString()}</p>
-`;
-
-/* ===============================
-   SEND TO WHATSAPP (SAFE)
-================================ */
-function sendToWhatsApp() {
-  if (!order || !order.items || order.items.length === 0) {
-    alert("No order has been placed yet.");
+function sendToWhatsApp(){
+  if (!window.currentOrder) {
+    alert("No order has been placed yet");
     return;
   }
 
   let msg = `OKIZZ TICKET ORDER%0A%0A`;
-  msg += `Name: ${order.name}%0A`;
-  msg += `Email: ${order.email}%0A`;
-  msg += `Phone: ${order.phone}%0A`;
-  msg += `Order ID: ${order.orderId}%0A%0A`;
+  msg += `Name: ${currentOrder.name}%0A`;
+  msg += `Email: ${currentOrder.email}%0A`;
+  msg += `Phone: ${currentOrder.phone}%0A`;
+  msg += `Order ID: ${currentOrder._id}%0A%0A`;
 
-  order.items.forEach(item => {
-    msg += `${item.name} | Qty:${item.quantity} | ₦${(item.price * item.quantity).toLocaleString()}%0A`;
+  currentOrder.items.forEach(t => {
+    msg += `${t.name} | Qty:${t.quantity} | ₦${(t.price * t.quantity).toLocaleString()}%0A`;
   });
 
   window.open(
@@ -302,17 +319,16 @@ function sendToWhatsApp() {
     "_blank"
   );
 
-  // Clear admin warning AFTER successful send
   localStorage.removeItem("pendingAdminOrder");
   badge.style.display = "none";
-  warningBox.style.display = "none";
+  document.getElementById("warningBox").style.display = "none";
 }
 
 /* ===============================
-   WARN BEFORE EXIT IF UNSENT
+   WARN BEFORE EXIT
 ================================ */
 window.addEventListener("beforeunload", e => {
-  if (localStorage.getItem("pendingAdminOrder")) {
+  if (localStorage.getItem("pendingAdminOrder") === orderId) {
     e.preventDefault();
     e.returnValue = "";
   }
