@@ -332,6 +332,17 @@ app.get("/api/paystack/verify/:reference", async (req, res) => {
   }
 });
 
+// GET SINGLE ORDER
+app.get("/api/orders/:id", async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id);
+    if (!order) return res.status(404).json({ error: "Order not found" });
+    res.json(order);
+  } catch {
+    res.status(500).json({ error: "Failed to fetch order" });
+  }
+});
+
 /* =====================
    SERVER
 ===================== */
