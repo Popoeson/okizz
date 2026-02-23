@@ -278,24 +278,25 @@ async function verifyPayment(reference, orderId, orderRef){
     const res = await fetch(`${API_BASE}/api/paystack/verify/${reference}`);
     const data = await res.json();
 
-    if (!data || !data.data || data.data.status !== "success") {
+    // ✅ Frontend now checks the backend structure
+    if (!data || !data.success || !data.order) {
       alert("Payment verification failed. Contact support.");
       return;
     }
 
     // ✅ Save order locally for thank-you page
-    const lastOrder = { _id: orderId, orderRef, items: cart };
+    const lastOrder = { _id: data.order._id, orderRef: data.order.orderRef, items: cart };
     localStorage.setItem("lastOrder", JSON.stringify(lastOrder));
 
     // ✅ Flag admin notification
-    localStorage.setItem("pendingAdminOrder", orderId);
+    localStorage.setItem("pendingAdminOrder", data.order._id);
 
     // ✅ Clear cart
     localStorage.removeItem("cart");
 
     // ✅ Redirect to thank-you page with proper ref
-    window.location.href = `thank-you.html?order=${orderRef}`;
-    
+    window.location.href = `thank-you.html?order=${data.order.orderRef}`;
+
   } catch (err) {
     console.error(err);
     alert("Payment verification failed. Contact support.");
