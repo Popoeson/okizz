@@ -275,7 +275,13 @@ document.getElementById("payBtn").addEventListener("click", async () => {
 ================================ */
 async function verifyPayment(reference, orderId, orderRef){
   try {
-    await fetch(`${API_BASE}/api/paystack/verify/${reference}`);
+    const res = await fetch(`${API_BASE}/api/paystack/verify/${reference}`);
+    const data = await res.json();
+
+    if (!data || !data.data || data.data.status !== "success") {
+      alert("Payment verification failed. Contact support.");
+      return;
+    }
 
     // ✅ Save order locally for thank-you page
     const lastOrder = { _id: orderId, orderRef, items: cart };
@@ -287,9 +293,9 @@ async function verifyPayment(reference, orderId, orderRef){
     // ✅ Clear cart
     localStorage.removeItem("cart");
 
-    // ✅ Redirect
-    window.location.href = `thank-you.html?order=${order.orderRef || order._id}`;
-
+    // ✅ Redirect to thank-you page with proper ref
+    window.location.href = `thank-you.html?order=${orderRef}`;
+    
   } catch (err) {
     console.error(err);
     alert("Payment verification failed. Contact support.");
