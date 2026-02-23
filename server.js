@@ -297,17 +297,37 @@ app.get("/api/paystack/verify/:reference", async (req, res) => {
   try {
     const response = await axios.get(
       `https://api.paystack.co/transaction/verify/${req.params.reference}`,
-      { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } }
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`
+        }
+      }
     );
+
     const data = response.data.data;
-    if (data.status === "success") {
-      await Order.findByIdAndUpdate(data.metadata.orderId, {
-        paymentStatus: "paid",
-        paymentReference: data.reference
+
+    // 🔐 SAFETY CHECK (your injected logic)
+    if (!data.metadata || !data.metadata.orderId) {
+      return res.status(400).json({
+        error: "Invalid payment metadata"
       });
     }
+
+    if (data.status === "success") {
+      await Order.findByIdAndUpdate(
+        data.metadata.orderId,
+        {
+          paymentStatus: "paid",
+          paymentReference: data.reference
+        },
+        { new: true }
+      );
+    }
+
     res.json(response.data);
-  } catch {
+
+  } catch (error) {
+    console.error("Paystack verify error:", error.message);
     res.status(500).json({ error: "Verification failed" });
   }
 });
