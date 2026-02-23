@@ -170,10 +170,6 @@ header{
 
 <script>
 const API_BASE = "https://okizz.onrender.com";
-
-/* ===============================
-   CART
-================================ */
 let cart = JSON.parse(localStorage.getItem("cart")) || [];
 
 const cartCount  = document.getElementById("cartCount");
@@ -205,9 +201,6 @@ function renderOrder(){
 updateCartCount();
 renderOrder();
 
-/* ===============================
-   PAYSTACK FLOW
-================================ */
 document.getElementById("payBtn").addEventListener("click", async () => {
   const name  = document.getElementById("name").value.trim();
   const phone = document.getElementById("phone").value.trim();
@@ -224,34 +217,35 @@ document.getElementById("payBtn").addEventListener("click", async () => {
   }
 
   try {
-    // 🔹 Generate human-friendly orderRef
+    // 🔹 Generate orderRef in frontend
     const orderRef = `OKIZZ-${Date.now()}`;
 
-    // 1️⃣ CREATE ORDER IN DB
+    // 1️⃣ CREATE ORDER
     const orderRes = await fetch(`${API_BASE}/api/orders`, {
       method: "POST",
       headers: { "Content-Type":"application/json" },
       body: JSON.stringify({ name, phone, email, items: cart, orderRef })
     });
 
-    const order = await orderRes.json();
-    if(!order._id){
+    const orderData = await orderRes.json();
+    if(!orderData.success){
       alert("Failed to create order");
       return;
     }
 
+    const order = orderData.order;
+
     // 2️⃣ INIT PAYSTACK
     const handler = PaystackPop.setup({
       key: "pk_test_72e7641a30dcdbad32a51606354065cc5b62f20f",
-      email: email,
-      amount: order.totalAmount * 100, // amount in kobo
+      email,
+      amount: order.totalAmount * 100,
       currency: "NGN",
-      ref: orderRef, // ✅ use orderRef as Paystack reference
-      metadata: { orderRef }, // ✅ include orderRef in metadata
+      ref: orderRef,
+      metadata: { orderRef },
 
       callback: function(response){
-        // ⚠️ synchronous callback
-        verifyPayment(response.reference, order._id, orderRef);
+        verifyPayment(response.reference);
       },
 
       onClose: function(){
@@ -267,38 +261,27 @@ document.getElementById("payBtn").addEventListener("click", async () => {
   }
 });
 
-/* ===============================
-   VERIFY PAYMENT
-================================ */
-async function verifyPayment(reference, orderId, orderRef){
+async function verifyPayment(reference){
   try {
     const res = await fetch(`${API_BASE}/api/paystack/verify/${reference}`);
     const data = await res.json();
 
-    // ✅ Check backend response
-    if (!data || !data.success || !data.order) {
+    if(!data.success || !data.order){
       alert("Payment verification failed. Contact support.");
       return;
     }
 
-    // ✅ Save order locally for thank-you page
-    const lastOrder = { 
-      _id: data.order._id, 
-      orderRef: data.order.orderRef, 
-      items: cart 
-    };
-    localStorage.setItem("lastOrder", JSON.stringify(lastOrder));
-
-    // ✅ Flag admin notification
+    // Save last order locally
+    localStorage.setItem("lastOrder", JSON.stringify(data.order));
     localStorage.setItem("pendingAdminOrder", data.order._id);
 
-    // ✅ Clear cart
+    // Clear cart
     localStorage.removeItem("cart");
 
-    // ✅ Redirect to thank-you page with proper ref
+    // Redirect to thank-you page
     window.location.href = `thank-you.html?order=${data.order.orderRef}`;
 
-  } catch (err) {
+  } catch(err){
     console.error(err);
     alert("Payment verification failed. Contact support.");
   }
