@@ -224,7 +224,7 @@ document.getElementById("payBtn").addEventListener("click", async () => {
   }
 
   try {
-    // 🔹 Generate orderRef
+    // 🔹 Generate human-friendly orderRef
     const orderRef = `OKIZZ-${Date.now()}`;
 
     // 1️⃣ CREATE ORDER IN DB
@@ -244,19 +244,16 @@ document.getElementById("payBtn").addEventListener("click", async () => {
     const handler = PaystackPop.setup({
       key: "pk_test_72e7641a30dcdbad32a51606354065cc5b62f20f",
       email: email,
-      amount: order.totalAmount * 100,
+      amount: order.totalAmount * 100, // amount in kobo
       currency: "NGN",
-      ref: orderRef, // ✅ use orderRef as transaction reference
-      metadata: {
-        custom_fields: [
-          { display_name: "Order Mongo ID", variable_name: "order_id", value: order._id }
-        ]
-      },
+      ref: orderRef, // ✅ use orderRef as Paystack reference
+      metadata: { orderRef }, // ✅ include orderRef in metadata
+
       callback: function(response){
-        // ⚠️ Must be synchronous function
-        // 3️⃣ VERIFY PAYMENT
+        // ⚠️ synchronous callback
         verifyPayment(response.reference, order._id, orderRef);
       },
+
       onClose: function(){
         alert("Payment cancelled");
       }
@@ -278,14 +275,18 @@ async function verifyPayment(reference, orderId, orderRef){
     const res = await fetch(`${API_BASE}/api/paystack/verify/${reference}`);
     const data = await res.json();
 
-    // ✅ Frontend now checks the backend structure
+    // ✅ Check backend response
     if (!data || !data.success || !data.order) {
       alert("Payment verification failed. Contact support.");
       return;
     }
 
     // ✅ Save order locally for thank-you page
-    const lastOrder = { _id: data.order._id, orderRef: data.order.orderRef, items: cart };
+    const lastOrder = { 
+      _id: data.order._id, 
+      orderRef: data.order.orderRef, 
+      items: cart 
+    };
     localStorage.setItem("lastOrder", JSON.stringify(lastOrder));
 
     // ✅ Flag admin notification
