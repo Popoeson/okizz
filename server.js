@@ -269,7 +269,7 @@ app.use("/api/hero", heroRouter);
 // CREATE ORDER
 app.post("/api/orders", async (req, res) => {
   try {
-    const { name, phone, email, items } = req.body;
+    const { name, phone, email, items, orderRef } = req.body;
 
     if (!name || !phone || !email || !items || items.length === 0) {
       return res.status(400).json({ error: "Invalid order data" });
@@ -278,9 +278,7 @@ app.post("/api/orders", async (req, res) => {
     let total = 0;
     items.forEach(i => (total += i.price * i.quantity));
 
-    // ✅ Generate human-friendly order reference
-    const orderRef = `OKIZZ-${Date.now()}`;
-
+    // ✅ Use frontend-generated orderRef
     const order = await Order.create({
       name,
       phone,
@@ -291,7 +289,7 @@ app.post("/api/orders", async (req, res) => {
       paymentStatus: "pending"
     });
 
-    res.json(order);
+    res.json({ success: true, order });
   } catch (error) {
     console.error("Create order error:", error.message);
     res.status(500).json({ error: "Failed to create order" });
@@ -329,42 +327,40 @@ app.post("/api/paystack/init", async (req, res) => {
   }
 });
 
-// VERIFY PAYMENT
+// ========= VERIFY PAYMENT ==========
 app.get("/api/paystack/verify/:reference", async (req, res) => {
   try {
     const response = await axios.get(
       `https://api.paystack.co/transaction/verify/${req.params.reference}`,
       {
-        headers: {
-          Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`
-        }
+        headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` }
       }
     );
 
     const data = response.data.data;
 
-    // 🔐 Safety check
     if (!data.metadata || !data.metadata.orderRef) {
-      return res.status(400).json({ error: "Invalid payment metadata" });
+      return res.status(400).json({ success: false, message: "Invalid payment metadata", order: null });
     }
 
-    // ✅ Update order status
+    const order = await Order.findOne({ orderRef: data.metadata.orderRef });
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: "Order not found", order: null });
+    }
+
     if (data.status === "success") {
-      const updatedOrder = await Order.findOneAndUpdate(
-        { orderRef: data.metadata.orderRef },
-        {
-          paymentStatus: "paid",
-          paymentReference: data.reference
-        },
-        { new: true }
-      );
-      return res.json({ success: true, order: updatedOrder });
+      order.paymentStatus = "paid";
+      order.paymentReference = data.reference;
+      await order.save();
+
+      return res.json({ success: true, order });
     }
 
-    res.json({ success: false, message: "Payment not successful", data });
+    res.json({ success: false, message: "Payment not successful", order });
   } catch (error) {
     console.error("Paystack verify error:", error.message);
-    res.status(500).json({ error: "Verification failed" });
+    res.status(500).json({ success: false, message: "Verification failed", order: null });
   }
 });
 
