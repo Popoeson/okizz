@@ -236,21 +236,26 @@ if (!orderId) {
 const badge = document.getElementById("notifyBadge");
 if (localStorage.getItem("pendingAdminOrder") === orderId) {
   badge.style.display = "block";
-  document.getElementById("warningBox").style.display = "block";
+  const warningBox = document.getElementById("warningBox");
+  if (warningBox) warningBox.style.display = "block";
 }
 
 /* ===============================
    FETCH ORDER FROM BACKEND
 ================================ */
-async function loadOrder(){
+async function loadOrder() {
   try {
     const res = await fetch(`${API_BASE}/api/orders/${orderId}`);
     const order = await res.json();
 
     if (!order._id) {
       alert("Order not found");
+      window.location.href = "index.html";
       return;
     }
+
+    // Save to global so WhatsApp can access it
+    window.currentOrder = order;
 
     /* BUYER INFO */
     document.getElementById("buyerInfo").innerHTML = `
@@ -280,13 +285,10 @@ async function loadOrder(){
     /* ORDER SUMMARY */
     document.getElementById("orderInfo").innerHTML = `
       <h2>Order Summary</h2>
-      <p><strong>Order ID:</strong> ${order._id}</p>
+      <p><strong>Order ID:</strong> ${order.orderRef || order._id}</p>
       <p class="total">Total: ₦${order.totalAmount.toLocaleString()}</p>
-      <p>Status: <strong>${order.paymentStatus.toUpperCase()}</strong></p>
+      <p>Status: <strong>${(order.paymentStatus || 'PENDING').toUpperCase()}</strong></p>
     `;
-
-    window.currentOrder = order;
-
   } catch (err) {
     console.error(err);
     alert("Failed to load order");
@@ -298,30 +300,31 @@ loadOrder();
 /* ===============================
    SEND TO WHATSAPP
 ================================ */
-function sendToWhatsApp(){
-  if (!window.currentOrder) {
+function sendToWhatsApp() {
+  const order = window.currentOrder;
+  if (!order) {
     alert("No order has been placed yet");
     return;
   }
 
-  let msg = `OKIZZ TICKET ORDER%0A%0A`;
-  msg += `Name: ${currentOrder.name}%0A`;
-  msg += `Email: ${currentOrder.email}%0A`;
-  msg += `Phone: ${currentOrder.phone}%0A`;
-  msg += `Order ID: ${currentOrder._id}%0A%0A`;
+  const orderRef = order.orderRef || order._id;
 
-  currentOrder.items.forEach(t => {
+  let msg = `OKIZZ TICKET ORDER%0A%0A`;
+  msg += `Name: ${order.name}%0A`;
+  msg += `Email: ${order.email}%0A`;
+  msg += `Phone: ${order.phone}%0A`;
+  msg += `Order ID: ${orderRef}%0A%0A`;
+
+  order.items.forEach(t => {
     msg += `${t.name} | Qty:${t.quantity} | ₦${(t.price * t.quantity).toLocaleString()}%0A`;
   });
 
-  window.open(
-    `https://wa.me/2349122054068?text=${msg}`,
-    "_blank"
-  );
+  window.open(`https://wa.me/2349122054068?text=${msg}`, "_blank");
 
   localStorage.removeItem("pendingAdminOrder");
   badge.style.display = "none";
-  document.getElementById("warningBox").style.display = "none";
+  const warningBox = document.getElementById("warningBox");
+  if (warningBox) warningBox.style.display = "none";
 }
 
 /* ===============================
@@ -334,5 +337,6 @@ window.addEventListener("beforeunload", e => {
   }
 });
 </script>
+
 </body>
 </html>
