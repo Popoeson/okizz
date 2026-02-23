@@ -288,7 +288,7 @@ async function verifyPayment(reference, orderId, orderRef){
     localStorage.removeItem("cart");
 
     // ✅ Redirect
-    window.location.href = `thank-you.html?order=${orderId}`;
+    window.location.href = `thank-you.html?order=${order.orderRef || order._id}`;
 
   } catch (err) {
     console.error(err);
