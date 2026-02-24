@@ -173,36 +173,61 @@ header{
 const API_BASE = "https://okizz.onrender.com";
 let allOrders = [];
 
+/* =====================
+   LOAD ORDERS
+===================== */
 async function loadOrders(){
-  const res = await fetch(`${API_BASE}/api/orders`);
-  const data = await res.json();
-  allOrders = data || [];
-  renderOrders(allOrders);
+  try {
+    const res = await fetch(`${API_BASE}/api/orders`);
+    const data = await res.json();
+
+    // Normalize all fields for safety
+    allOrders = (data || []).map(o => ({
+      ...o,
+      name: o.name || "",
+      email: o.email || "",
+      phone: o.phone || "",
+      orderRef: o.orderRef || "",
+      paymentStatus: o.paymentStatus || "",
+      items: Array.isArray(o.items) ? o.items : [],
+      totalAmount: o.totalAmount || 0,
+      createdAt: o.createdAt || new Date()
+    }));
+
+    renderOrders(allOrders);
+  } catch (err) {
+    console.error("Failed to load orders", err);
+  }
 }
 
+/* =====================
+   RENDER ORDERS
+===================== */
 function renderOrders(list){
   const box = document.getElementById("orders");
   const empty = document.getElementById("empty");
+
   box.innerHTML = "";
 
-  if(list.length === 0){
+  if (!list.length) {
     empty.style.display = "block";
     return;
   }
+
   empty.style.display = "none";
 
-  list.forEach(order=>{
+  list.forEach(order => {
     const card = document.createElement("div");
     card.className = "order-card";
 
     card.innerHTML = `
       <div class="order-head">
         <div>
-          <h3>${order.name}</h3>
-          <div class="meta">Order Ref: ${order.orderRef}</div>
+          <h3>${order.name || "Unnamed Buyer"}</h3>
+          <div class="meta">Order Ref: ${order.orderRef || "—"}</div>
         </div>
         <span class="badge ${order.paymentStatus}">
-          ${order.paymentStatus.toUpperCase()}
+          ${(order.paymentStatus || "unknown").toUpperCase()}
         </span>
       </div>
 
@@ -212,17 +237,17 @@ function renderOrders(list){
       </div>
 
       <div class="details">
-        <p><strong>Email:</strong> ${order.email}</p>
-        <p><strong>Phone:</strong> ${order.phone}</p>
+        <p><strong>Email:</strong> ${order.email || "—"}</p>
+        <p><strong>Phone:</strong> ${order.phone || "—"}</p>
         <p><strong>Payment Ref:</strong> ${order.paymentReference || "—"}</p>
 
         <h4 style="margin-top:12px">Tickets</h4>
-        ${order.items.map(t=>`
+        ${order.items.map(t => `
           <div class="ticket">
-            <strong>${t.name}</strong>
+            <strong>${t.name}</strong><br>
             <span>Qty: ${t.quantity}</span><br>
-            <span>Unit: ₦${t.price.toLocaleString()}</span><br>
-            <span>Subtotal: ₦${(t.price*t.quantity).toLocaleString()}</span>
+            <span>Unit: ₦${(t.price || 0).toLocaleString()}</span><br>
+            <span>Subtotal: ₦${((t.price || 0) * (t.quantity || 0)).toLocaleString()}</span>
           </div>
         `).join("")}
 
@@ -232,7 +257,8 @@ function renderOrders(list){
       </div>
     `;
 
-    card.querySelector(".order-head").onclick = ()=>{
+    // Toggle details
+    card.querySelector(".order-head").onclick = () => {
       const d = card.querySelector(".details");
       d.style.display = d.style.display === "block" ? "none" : "block";
     };
@@ -241,30 +267,41 @@ function renderOrders(list){
   });
 }
 
-/* SEARCH + FILTER */
+/* =====================
+   SEARCH + FILTER
+===================== */
 document.getElementById("search").addEventListener("input", filterOrders);
 document.getElementById("statusFilter").addEventListener("change", filterOrders);
 
 function filterOrders(){
-  const q = document.getElementById("search").value.toLowerCase();
+  const q = document.getElementById("search").value.toLowerCase().trim();
   const status = document.getElementById("statusFilter").value;
 
-  const filtered = allOrders.filter(o=>{
-    const matchesText =
-      o.name.toLowerCase().includes(q) ||
-      o.email.toLowerCase().includes(q) ||
-      o.phone.includes(q) ||
-      o.orderRef.toLowerCase().includes(q);
+  const filtered = allOrders.filter(o => {
+    const name  = o.name.toLowerCase();
+    const email = o.email.toLowerCase();
+    const phone = o.phone;
+    const ref   = o.orderRef.toLowerCase();
 
-    const matchesStatus = !status || o.paymentStatus === status;
+    const matchesText =
+      name.includes(q) ||
+      email.includes(q) ||
+      phone.includes(q) ||
+      ref.includes(q);
+
+    const matchesStatus =
+      !status || o.paymentStatus === status;
+
     return matchesText && matchesStatus;
   });
 
   renderOrders(filtered);
 }
 
+/* =====================
+   INIT
+===================== */
 loadOrders();
 </script>
-
 </body>
 </html>
