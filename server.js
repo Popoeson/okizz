@@ -376,6 +376,19 @@ app.get("/api/orders/ref/:orderRef", async (req, res) => {
   }
 });
 
+// GET ALL ORDERS (ADMIN)
+app.get("/api/orders", async (req, res) => {
+  try {
+    const orders = await Order.find()
+      .sort({ createdAt: -1 }); // latest first
+
+    res.json(orders);
+  } catch (error) {
+    console.error("Fetch orders error:", error.message);
+    res.status(500).json({ error: "Failed to fetch orders" });
+  }
+});
+
 /* GET SINGLE ORDER
 app.get("/api/orders/:id", async (req, res) => {
   try {
