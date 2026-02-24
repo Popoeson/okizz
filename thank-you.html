@@ -247,13 +247,24 @@ async function loadOrder(){
 
 loadOrder();
 
-function sendToWhatsApp(){
-  const o = window.currentOrder;
-  let msg = `OKIZZ TICKET ORDER%0A%0AOrder ID: ${o.orderRef}%0AName: ${o.name}%0AEmail: ${o.email}%0A`;
-  o.items.forEach(t=>{
-    msg += `${t.name} x${t.quantity}%0A`;
-  });
+function sendToWhatsApp() {
+const order = window.currentOrder;
+if (!order) {
+alert("No order has been placed yet");
+return;
+}
 
+const orderRef = order.orderRef || order._id;
+
+let msg = OKIZZ TICKET ORDER%0A%0A;
+msg += Name: ${order.name}%0A;
+msg += Email: ${order.email}%0A;
+msg += Phone: ${order.phone}%0A;
+msg += Order ID: ${orderRef}%0A%0A;
+
+order.items.forEach(t => {
+msg += ${t.name} | Qty:${t.quantity} | ₦${(t.price * t.quantity).toLocaleString()}%0A;
+});
   window.open(`https://wa.me/2349122054068?text=${msg}`,"_blank");
 
   localStorage.removeItem("pendingAdminOrder");
