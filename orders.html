@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Orders | Okizz</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+:root{
+  --bg:#F5F0E1;
+  --card:rgba(255,255,255,0.75);
+  --accent:#6B8E23;
+  --wine:#7A1E3A;
+  --text:#2A2A2A;
+  --muted:#666;
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+
+body{
+  font-family:Inter,sans-serif;
+  background:radial-gradient(circle at top,#fff,var(--bg));
+  color:var(--text);
+}
+
+/* HEADER */
+header{
+  padding:18px 24px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  background:rgba(255,255,255,0.7);
+  backdrop-filter:blur(12px);
+  box-shadow:0 6px 20px rgba(0,0,0,.06);
+}
+
+.logo{
+  font-family:"Playfair Display",serif;
+  font-size:22px;
+  letter-spacing:1px;
+}
+
+/* CONTENT */
+.container{
+  max-width:1000px;
+  margin:40px auto;
+  padding:20px;
+}
+
+/* FILTER BAR */
+.filters{
+  display:flex;
+  gap:12px;
+  margin-bottom:24px;
+}
+
+.filters input,
+.filters select{
+  padding:12px 14px;
+  border-radius:12px;
+  border:none;
+  background:rgba(255,255,255,.8);
+  backdrop-filter:blur(10px);
+  width:100%;
+}
+
+/* CARD */
+.order-card{
+  background:var(--card);
+  backdrop-filter:blur(18px);
+  border-radius:20px;
+  padding:22px;
+  box-shadow:0 20px 40px rgba(0,0,0,.08);
+  margin-bottom:20px;
+}
+
+/* ORDER HEADER */
+.order-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  cursor:pointer;
+}
+
+.order-head h3{
+  font-size:1rem;
+}
+
+.badge{
+  padding:6px 12px;
+  border-radius:999px;
+  font-size:.75rem;
+  color:#fff;
+}
+
+.paid{background:var(--accent)}
+.pending{background:#c49b1c}
+.failed{background:var(--wine)}
+
+.meta{
+  font-size:.75rem;
+  color:var(--muted);
+  margin-top:6px;
+}
+
+/* DETAILS */
+.details{
+  display:none;
+  margin-top:18px;
+  border-top:1px solid rgba(0,0,0,.08);
+  padding-top:16px;
+}
+
+.details p{
+  font-size:.85rem;
+  margin:6px 0;
+}
+
+/* TICKETS */
+.ticket{
+  background:rgba(255,255,255,.6);
+  border-radius:14px;
+  padding:14px;
+  margin-top:12px;
+}
+
+.ticket strong{display:block}
+.ticket span{
+  font-size:.8rem;
+  color:#555;
+}
+
+/* TOTAL */
+.total{
+  margin-top:14px;
+  font-weight:600;
+  color:var(--accent);
+}
+
+/* EMPTY */
+.empty{
+  text-align:center;
+  color:#777;
+  margin-top:40px;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <div class="logo">OKIZZ — Orders</div>
+</header>
+
+<div class="container">
+
+  <div class="filters">
+    <input type="text" id="search" placeholder="Search name, email, phone or order ref">
+    <select id="statusFilter">
+      <option value="">All Status</option>
+      <option value="paid">Paid</option>
+      <option value="pending">Pending</option>
+      <option value="failed">Failed</option>
+    </select>
+  </div>
+
+  <div id="orders"></div>
+  <div id="empty" class="empty" style="display:none">No orders found</div>
+
+</div>
+
+<script>
+const API_BASE = "https://okizz.onrender.com";
+let allOrders = [];
+
+async function loadOrders(){
+  const res = await fetch(`${API_BASE}/api/orders`);
+  const data = await res.json();
+  allOrders = data || [];
+  renderOrders(allOrders);
+}
+
+function renderOrders(list){
+  const box = document.getElementById("orders");
+  const empty = document.getElementById("empty");
+  box.innerHTML = "";
+
+  if(list.length === 0){
+    empty.style.display = "block";
+    return;
+  }
+  empty.style.display = "none";
+
+  list.forEach(order=>{
+    const card = document.createElement("div");
+    card.className = "order-card";
+
+    card.innerHTML = `
+      <div class="order-head">
+        <div>
+          <h3>${order.name}</h3>
+          <div class="meta">Order Ref: ${order.orderRef}</div>
+        </div>
+        <span class="badge ${order.paymentStatus}">
+          ${order.paymentStatus.toUpperCase()}
+        </span>
+      </div>
+
+      <div class="meta">
+        ₦${order.totalAmount.toLocaleString()} •
+        ${new Date(order.createdAt).toLocaleString()}
+      </div>
+
+      <div class="details">
+        <p><strong>Email:</strong> ${order.email}</p>
+        <p><strong>Phone:</strong> ${order.phone}</p>
+        <p><strong>Payment Ref:</strong> ${order.paymentReference || "—"}</p>
+
+        <h4 style="margin-top:12px">Tickets</h4>
+        ${order.items.map(t=>`
+          <div class="ticket">
+            <strong>${t.name}</strong>
+            <span>Qty: ${t.quantity}</span><br>
+            <span>Unit: ₦${t.price.toLocaleString()}</span><br>
+            <span>Subtotal: ₦${(t.price*t.quantity).toLocaleString()}</span>
+          </div>
+        `).join("")}
+
+        <div class="total">
+          Total: ₦${order.totalAmount.toLocaleString()}
+        </div>
+      </div>
+    `;
+
+    card.querySelector(".order-head").onclick = ()=>{
+      const d = card.querySelector(".details");
+      d.style.display = d.style.display === "block" ? "none" : "block";
+    };
+
+    box.appendChild(card);
+  });
+}
+
+/* SEARCH + FILTER */
+document.getElementById("search").addEventListener("input", filterOrders);
+document.getElementById("statusFilter").addEventListener("change", filterOrders);
+
+function filterOrders(){
+  const q = document.getElementById("search").value.toLowerCase();
+  const status = document.getElementById("statusFilter").value;
+
+  const filtered = allOrders.filter(o=>{
+    const matchesText =
+      o.name.toLowerCase().includes(q) ||
+      o.email.toLowerCase().includes(q) ||
+      o.phone.includes(q) ||
+      o.orderRef.toLowerCase().includes(q);
+
+    const matchesStatus = !status || o.paymentStatus === status;
+    return matchesText && matchesStatus;
+  });
+
+  renderOrders(filtered);
+}
+
+loadOrders();
+</script>
+
+</body>
+</html>
