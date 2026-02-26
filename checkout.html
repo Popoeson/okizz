@@ -236,24 +236,34 @@ document.getElementById("payBtn").addEventListener("click", async () => {
     const order = orderData.order;
 
     // 2️⃣ INIT PAYSTACK
-    const handler = PaystackPop.setup({
-      key: "pk_live_9ea850872c6c1053cbf1530b95c65bdf4535048d",
-      email,
-      amount: order.totalAmount * 100,
-      currency: "NGN",
-      ref: orderRef,
-      metadata: { orderRef },
+const handler = PaystackPop.setup({
+  key: "pk_live_9ea850872c6c1053cbf1530b95c65bdf4535048d",
+  email,
+  amount: order.totalAmount * 100,
+  currency: "NGN",
 
-      callback: function(response){
-        verifyPayment(response.reference);
-      },
-
-      onClose: function(){
-        alert("Payment cancelled");
+  // ✅ Store your order ID safely
+  metadata: {
+    custom_fields: [
+      {
+        display_name: "Order ID",
+        variable_name: "order_id",
+        value: orderRef
       }
-    });
+    ]
+  },
 
-    handler.openIframe();
+  callback: function (response) {
+    // Use Paystack-generated reference
+    verifyPayment(response.reference);
+  },
+
+  onClose: function () {
+    alert("Payment cancelled");
+  }
+});
+
+handler.openIframe();
 
   } catch (err) {
     console.error(err);
