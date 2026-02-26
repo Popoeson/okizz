@@ -221,6 +221,7 @@ document.getElementById("payBtn").addEventListener("click", async () => {
   try {
     // Generate a unique order reference
     const orderRef = `OKIZZ-${Date.now()}`;
+    localStorage.setItem("pendingOrderRef", orderRef); // save for pending page
 
     // 1️⃣ Create order in backend
     const orderRes = await fetch(`${API_BASE}/api/orders`, {
@@ -244,34 +245,32 @@ document.getElementById("payBtn").addEventListener("click", async () => {
       amount: order.totalAmount * 100,
       currency: "NGN",
       metadata: {
-        orderRef // simple metadata, webhook will use this
+        orderRef // webhook will use this
       },
       callback: function(response){
-        // Optional: still verify if user completes immediately
-        verifyPayment(response.reference);
+        // Payment successful immediately (card payment)
+        localStorage.removeItem("pendingOrderRef");
+        localStorage.setItem("lastOrder", JSON.stringify(order));
+        localStorage.removeItem("cart");
+        window.location.href = `thank-you.html?order=${orderRef}`;
       },
       onClose: function(){
         // User closed the popup
-        alert("Payment window closed. You can complete your payment on your bank/USSD app.");
-        // Redirect to pending page
-        localStorage.setItem("pendingOrderRef", orderRef);
+        alert("Payment window closed. Complete your payment on your bank/USSD app.");
         window.location.href = `pending-payment.html?order=${orderRef}`;
       }
     });
 
     handler.openIframe();
 
-    // Immediately redirect to pending page for webhook payments
-    localStorage.setItem("pendingOrderRef", orderRef);
-    window.location.href = `pending-payment.html?order=${orderRef}`;
-
+    // ✅ Do NOT redirect immediately — let the popup stay open
   } catch (err) {
     console.error(err);
     alert("Something went wrong. Please try again.");
   }
 });
 
-// Verify payment (for immediate completion)
+// Optional: immediate verification for instant card payments
 async function verifyPayment(reference){
   try {
     const res = await fetch(`${API_BASE}/api/paystack/verify/${reference}`);
@@ -284,14 +283,11 @@ async function verifyPayment(reference){
 
     // Save last order locally
     localStorage.setItem("lastOrder", JSON.stringify(data.order));
-    localStorage.setItem("pendingAdminOrder", data.order._id);
-
-    // Clear cart
+    localStorage.removeItem("pendingOrderRef");
     localStorage.removeItem("cart");
 
     // Redirect to thank-you page
     window.location.href = `thank-you.html?order=${data.order.orderRef}`;
-
   } catch(err){
     console.error(err);
     alert("Payment verification failed. Contact support.");
