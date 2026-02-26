@@ -327,25 +327,28 @@ app.post("/api/paystack/init", async (req, res) => {
   }
 });
 
+/* ===========================
+   PAYSTACK VERIFICATION & WEBHOOK
+=========================== */
+
+const crypto = require("crypto");
+
 // ========= VERIFY PAYMENT ==========
 app.get("/api/paystack/verify/:reference", async (req, res) => {
   try {
+    const reference = req.params.reference;
+
     const response = await axios.get(
-      `https://api.paystack.co/transaction/verify/${req.params.reference}`,
+      `https://api.paystack.co/transaction/verify/${reference}`,
       {
-        headers: {
-          Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`
-        }
+        headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` }
       }
     );
 
     const data = response.data.data;
 
-    // 🔐 Extract your orderRef from metadata
-    const orderRef =
-      data.metadata?.custom_fields?.find(
-        f => f.variable_name === "order_id"
-      )?.value;
+    // ✅ Extract orderRef from metadata
+    const orderRef = data.metadata?.orderRef;
 
     if (!orderRef) {
       return res.status(400).json({
@@ -356,7 +359,6 @@ app.get("/api/paystack/verify/:reference", async (req, res) => {
     }
 
     const order = await Order.findOne({ orderRef });
-
     if (!order) {
       return res.status(404).json({
         success: false,
@@ -366,9 +368,12 @@ app.get("/api/paystack/verify/:reference", async (req, res) => {
     }
 
     if (data.status === "success") {
-      order.paymentStatus = "paid";
-      order.paymentReference = data.reference; // Paystack ref
-      await order.save();
+      // Update only if not already paid
+      if (order.paymentStatus !== "paid") {
+        order.paymentStatus = "paid";
+        order.paymentReference = data.reference;
+        await order.save();
+      }
 
       return res.json({ success: true, order });
     }
@@ -385,51 +390,50 @@ app.get("/api/paystack/verify/:reference", async (req, res) => {
   }
 });
 
-// ===== PAYSTACK WEBHOOK =========
-app.post("/api/paystack/webhook", bodyParser.raw({ type: "application/json" }), async (req, res) => {
-  try {
-    const crypto = require("crypto");
+// ===== PAYSTACK WEBHOOK =====
+app.post(
+  "/api/paystack/webhook",
+  express.raw({ type: "application/json" }), // ✅ raw body required for signature verification
+  async (req, res) => {
+    try {
+      // 🔐 Verify Paystack signature
+      const hash = crypto
+        .createHmac("sha512", process.env.PAYSTACK_SECRET_KEY)
+        .update(req.body)
+        .digest("hex");
 
-    // 🔐 Verify Paystack signature
-    const hash = crypto
-      .createHmac("sha512", process.env.PAYSTACK_SECRET_KEY)
-      .update(req.body)
-      .digest("hex");
+      if (hash !== req.headers["x-paystack-signature"]) {
+        return res.sendStatus(400);
+      }
 
-    if (hash !== req.headers["x-paystack-signature"]) {
-      return res.sendStatus(400);
-    }
-
-    const event = JSON.parse(req.body.toString());
-
-    // ✅ Successful payment
-    if (event.event === "charge.success") {
+      const event = JSON.parse(req.body.toString());
       const data = event.data;
 
-      const orderRef =
-        data.metadata?.custom_fields?.find(
-          f => f.variable_name === "order_id"
-        )?.value;
+      // Only handle successful charges
+      if (event.event === "charge.success") {
+        const orderRef = data.metadata?.orderRef;
+        if (!orderRef) return res.sendStatus(200);
 
-      if (!orderRef) return res.sendStatus(200);
+        const order = await Order.findOne({ orderRef });
+        if (!order) return res.sendStatus(200);
 
-      const order = await Order.findOne({ orderRef });
-      if (!order) return res.sendStatus(200);
-
-      // Prevent double updates
-      if (order.paymentStatus !== "paid") {
-        order.paymentStatus = "paid";
-        order.paymentReference = data.reference;
-        await order.save();
+        // Prevent double updates
+        if (order.paymentStatus !== "paid") {
+          order.paymentStatus = "paid";
+          order.paymentReference = data.reference;
+          await order.save();
+          console.log(`Order ${orderRef} marked as paid via webhook`);
+        }
       }
-    }
 
-    res.sendStatus(200);
-  } catch (err) {
-    console.error("Webhook error:", err.message);
-    res.sendStatus(500);
+      res.sendStatus(200);
+
+    } catch (err) {
+      console.error("Webhook error:", err.message);
+      res.sendStatus(500);
+    }
   }
-});
+);
 
 // GET SINGLE ORDER BY REF (optional, easier for frontend)
 app.get("/api/orders/ref/:orderRef", async (req, res) => {
