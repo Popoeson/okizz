@@ -176,10 +176,12 @@ const cartCount  = document.getElementById("cartCount");
 const orderItems = document.getElementById("orderItems");
 const orderTotal = document.getElementById("orderTotal");
 
+// Update cart count badge
 function updateCartCount(){
   cartCount.textContent = cart.reduce((s,i)=>s+i.quantity,0);
 }
 
+// Render order items and total
 function renderOrder(){
   let total = 0;
   orderItems.innerHTML = "";
@@ -217,10 +219,10 @@ document.getElementById("payBtn").addEventListener("click", async () => {
   }
 
   try {
-    // 🔹 Generate orderRef in frontend
+    // Generate a unique order reference
     const orderRef = `OKIZZ-${Date.now()}`;
 
-    // 1️⃣ CREATE ORDER
+    // 1️⃣ Create order in backend
     const orderRes = await fetch(`${API_BASE}/api/orders`, {
       method: "POST",
       headers: { "Content-Type":"application/json" },
@@ -235,35 +237,33 @@ document.getElementById("payBtn").addEventListener("click", async () => {
 
     const order = orderData.order;
 
-    // 2️⃣ INIT PAYSTACK
-const handler = PaystackPop.setup({
-  key: "pk_live_9ea850872c6c1053cbf1530b95c65bdf4535048d",
-  email,
-  amount: order.totalAmount * 100,
-  currency: "NGN",
-
-  // ✅ Store your order ID safely
-  metadata: {
-    custom_fields: [
-      {
-        display_name: "Order ID",
-        variable_name: "order_id",
-        value: orderRef
+    // 2️⃣ Initialize Paystack payment
+    const handler = PaystackPop.setup({
+      key: "pk_live_9ea850872c6c1053cbf1530b95c65bdf4535048d",
+      email,
+      amount: order.totalAmount * 100,
+      currency: "NGN",
+      metadata: {
+        orderRef // simple metadata, webhook will use this
+      },
+      callback: function(response){
+        // Optional: still verify if user completes immediately
+        verifyPayment(response.reference);
+      },
+      onClose: function(){
+        // User closed the popup
+        alert("Payment window closed. You can complete your payment on your bank/USSD app.");
+        // Redirect to pending page
+        localStorage.setItem("pendingOrderRef", orderRef);
+        window.location.href = `pending-payment.html?order=${orderRef}`;
       }
-    ]
-  },
+    });
 
-  callback: function (response) {
-    // Use Paystack-generated reference
-    verifyPayment(response.reference);
-  },
+    handler.openIframe();
 
-  onClose: function () {
-    alert("Payment cancelled");
-  }
-});
-
-handler.openIframe();
+    // Immediately redirect to pending page for webhook payments
+    localStorage.setItem("pendingOrderRef", orderRef);
+    window.location.href = `pending-payment.html?order=${orderRef}`;
 
   } catch (err) {
     console.error(err);
@@ -271,6 +271,7 @@ handler.openIframe();
   }
 });
 
+// Verify payment (for immediate completion)
 async function verifyPayment(reference){
   try {
     const res = await fetch(`${API_BASE}/api/paystack/verify/${reference}`);
