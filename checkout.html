@@ -203,6 +203,7 @@ function renderOrder(){
 updateCartCount();
 renderOrder();
 
+// Pay button click
 document.getElementById("payBtn").addEventListener("click", async () => {
   const name  = document.getElementById("name").value.trim();
   const phone = document.getElementById("phone").value.trim();
@@ -219,9 +220,9 @@ document.getElementById("payBtn").addEventListener("click", async () => {
   }
 
   try {
-    // Generate a unique order reference
+    // Generate unique order reference
     const orderRef = `OKIZZ-${Date.now()}`;
-    localStorage.setItem("pendingOrderRef", orderRef); // Save for pending page
+    localStorage.setItem("pendingOrderRef", orderRef); // save for pending page
 
     // 1️⃣ Create order in backend
     const orderRes = await fetch(`${API_BASE}/api/orders`, {
@@ -238,66 +239,60 @@ document.getElementById("payBtn").addEventListener("click", async () => {
 
     const order = orderData.order;
 
-    // 2️⃣ Initialize Paystack payment
+    // 2️⃣ Initialize Paystack
     const handler = PaystackPop.setup({
-      key: "pk_live_9ea850872c6c1053cbf1530b95c65bdf4535048d", // LIVE key
+      key: "pk_live_9ea850872c6c1053cbf1530b95c65bdf4535048d",
       email,
       amount: order.totalAmount * 100,
       currency: "NGN",
-      metadata: {
-        custom_fields: [
-          { display_name: "Order ID", variable_name: "order_id", value: orderRef }
-        ]
-      },
+      metadata: { orderRef }, // pass orderRef directly
       callback: function(response){
-        // ✅ Verify payment via backend before completing
+        // Payment successful (card)
         verifyPayment(response.reference);
       },
       onClose: function(){
-        // User closed the popup before paying
-        alert("Payment window closed. You can complete your payment on your bank/USSD app.");
+        // Popup closed before payment
+        alert("Payment window closed. You can complete payment on your bank/USSD app.");
         window.location.href = `pending-payment.html?order=${orderRef}`;
       }
     });
 
-    handler.openIframe(); // Show Paystack popup
+    // Show popup
+    handler.openIframe();
 
   } catch (err) {
-    console.error(err);
+    console.error("Checkout error:", err);
     alert("Something went wrong. Please try again.");
   }
 });
 
-// Verify payment with backend
+// Verify payment via backend
 async function verifyPayment(reference){
   try {
     const res = await fetch(`${API_BASE}/api/paystack/verify/${reference}`);
     const data = await res.json();
 
     if(!data.success || !data.order){
-      alert("Payment verification failed. Contact support.");
-      // Redirect to pending page
+      alert("Payment verification failed. Redirecting to pending page...");
       const pendingRef = localStorage.getItem("pendingOrderRef");
       if(pendingRef) window.location.href = `pending-payment.html?order=${pendingRef}`;
       return;
     }
 
-    // Payment successful
+    // Payment confirmed
     localStorage.setItem("lastOrder", JSON.stringify(data.order));
     localStorage.removeItem("pendingOrderRef");
     localStorage.removeItem("cart");
 
-    // Redirect to thank-you page
+    // Redirect to thank-you
     window.location.href = `thank-you.html?order=${data.order.orderRef}`;
 
   } catch(err){
     console.error("Verify payment error:", err);
-    // Redirect to pending page
     const pendingRef = localStorage.getItem("pendingOrderRef");
     if(pendingRef) window.location.href = `pending-payment.html?order=${pendingRef}`;
   }
 }
 </script>
-
 </body>
 </html>
