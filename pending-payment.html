@@ -41,7 +41,7 @@
   <p>We are waiting for your payment to complete.<br>
   Please do not close this page if you completed payment via bank or USSD.</p>
 
-  <script>
+<script>
 const API_BASE = "https://okizz.onrender.com";
 
 // Get orderRef from URL or localStorage
@@ -66,29 +66,38 @@ if (!orderRef) {
 
   async function checkPayment() {
     try {
+      // Fetch the latest order status from backend
       const res = await fetch(`${API_BASE}/api/orders/ref/${orderRef}`);
       const data = await res.json();
 
       if (data && data.paymentStatus === "paid") {
+        // ✅ Payment confirmed
         statusMessage.textContent = "Payment confirmed! Redirecting...";
-        
+
         // Save order locally
         localStorage.setItem("lastOrder", JSON.stringify(data));
         localStorage.removeItem("pendingOrderRef");
         localStorage.removeItem("cart");
 
-        // Short delay for UX
+        // Short delay for UX, then redirect to thank-you page
         setTimeout(() => {
           window.location.href = `thank-you.html?order=${data.orderRef}`;
         }, 1500);
 
       } else if (data && data.paymentStatus === "pending") {
+        // Payment still pending, retry in 5 seconds
         statusMessage.textContent = "Payment still pending... checking again in 5 seconds.";
         setTimeout(checkPayment, 5000);
 
+      } else if (data && data.paymentStatus === "failed") {
+        // Payment failed, user may retry
+        statusMessage.innerHTML = `
+          Payment failed. Please <a href="checkout.html">try again</a> or contact support.
+        `;
+
       } else {
-        // Order exists but unknown status
-        statusMessage.textContent = "Order found but payment status unknown. Retrying...";
+        // Unknown status, keep retrying
+        statusMessage.textContent = "Order found but payment status unknown. Retrying in 5 seconds...";
         setTimeout(checkPayment, 5000);
       }
 
@@ -99,10 +108,11 @@ if (!orderRef) {
     }
   }
 
-  // Start polling
+  // Start polling immediately
   checkPayment();
 }
 </script>
+
 
 </body>
 </html>
