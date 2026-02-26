@@ -385,6 +385,52 @@ app.get("/api/paystack/verify/:reference", async (req, res) => {
   }
 });
 
+// ===== PAYSTACK WEBHOOK =========
+app.post("/api/paystack/webhook", bodyParser.raw({ type: "application/json" }), async (req, res) => {
+  try {
+    const crypto = require("crypto");
+
+    // 🔐 Verify Paystack signature
+    const hash = crypto
+      .createHmac("sha512", process.env.PAYSTACK_SECRET_KEY)
+      .update(req.body)
+      .digest("hex");
+
+    if (hash !== req.headers["x-paystack-signature"]) {
+      return res.sendStatus(400);
+    }
+
+    const event = JSON.parse(req.body.toString());
+
+    // ✅ Successful payment
+    if (event.event === "charge.success") {
+      const data = event.data;
+
+      const orderRef =
+        data.metadata?.custom_fields?.find(
+          f => f.variable_name === "order_id"
+        )?.value;
+
+      if (!orderRef) return res.sendStatus(200);
+
+      const order = await Order.findOne({ orderRef });
+      if (!order) return res.sendStatus(200);
+
+      // Prevent double updates
+      if (order.paymentStatus !== "paid") {
+        order.paymentStatus = "paid";
+        order.paymentReference = data.reference;
+        await order.save();
+      }
+    }
+
+    res.sendStatus(200);
+  } catch (err) {
+    console.error("Webhook error:", err.message);
+    res.sendStatus(500);
+  }
+});
+
 // GET SINGLE ORDER BY REF (optional, easier for frontend)
 app.get("/api/orders/ref/:orderRef", async (req, res) => {
   try {
