@@ -42,44 +42,67 @@
   Please do not close this page if you completed payment via bank or USSD.</p>
 
   <script>
-    const API_BASE = "https://okizz.onrender.com";
+const API_BASE = "https://okizz.onrender.com";
 
-    // Get orderRef from URL query
-    const urlParams = new URLSearchParams(window.location.search);
-    const orderRef = urlParams.get("order") || localStorage.getItem("pendingOrderRef");
+// Get orderRef from URL or localStorage
+const urlParams = new URLSearchParams(window.location.search);
+const orderRef = urlParams.get("order") || localStorage.getItem("pendingOrderRef");
 
-    if (!orderRef) {
-      document.body.innerHTML = "<h1>Order not found</h1><p>Please go back to the shop and try again.</p>";
-    } else {
+const container = document.getElementById("pendingContainer") || document.body;
 
-      async function checkPayment() {
-        try {
-          const res = await fetch(`${API_BASE}/api/orders/ref/${orderRef}`);
-          const data = await res.json();
+if (!orderRef) {
+  container.innerHTML = `
+    <h1>Order Not Found</h1>
+    <p>Please go back to the shop and try again.</p>
+  `;
+} else {
+  container.innerHTML = `
+    <h1>Waiting for Payment...</h1>
+    <p>We are checking your payment status. Please do not close this page.</p>
+    <div id="statusMessage">Checking...</div>
+  `;
 
-          if(data && data.paymentStatus === "paid") {
-            // Save order locally
-            localStorage.setItem("lastOrder", JSON.stringify(data));
-            localStorage.removeItem("pendingOrderRef");
-            localStorage.removeItem("cart");
+  const statusMessage = document.getElementById("statusMessage");
 
-            // Redirect to thank-you page
-            window.location.href = `thank-you.html?order=${data.orderRef}`;
-          } else {
-            // Still pending, check again in 5s
-            setTimeout(checkPayment, 5000);
-          }
-        } catch(err) {
-          console.error("Error checking payment:", err);
-          // Retry in 5s
-          setTimeout(checkPayment, 5000);
-        }
+  async function checkPayment() {
+    try {
+      const res = await fetch(`${API_BASE}/api/orders/ref/${orderRef}`);
+      const data = await res.json();
+
+      if (data && data.paymentStatus === "paid") {
+        statusMessage.textContent = "Payment confirmed! Redirecting...";
+        
+        // Save order locally
+        localStorage.setItem("lastOrder", JSON.stringify(data));
+        localStorage.removeItem("pendingOrderRef");
+        localStorage.removeItem("cart");
+
+        // Short delay for UX
+        setTimeout(() => {
+          window.location.href = `thank-you.html?order=${data.orderRef}`;
+        }, 1500);
+
+      } else if (data && data.paymentStatus === "pending") {
+        statusMessage.textContent = "Payment still pending... checking again in 5 seconds.";
+        setTimeout(checkPayment, 5000);
+
+      } else {
+        // Order exists but unknown status
+        statusMessage.textContent = "Order found but payment status unknown. Retrying...";
+        setTimeout(checkPayment, 5000);
       }
 
-      // Start polling
-      checkPayment();
+    } catch(err) {
+      console.error("Error checking payment:", err);
+      statusMessage.textContent = "Network error. Retrying in 5 seconds...";
+      setTimeout(checkPayment, 5000);
     }
-  </script>
+  }
+
+  // Start polling
+  checkPayment();
+}
+</script>
 
 </body>
 </html>
