@@ -333,34 +333,55 @@ app.get("/api/paystack/verify/:reference", async (req, res) => {
     const response = await axios.get(
       `https://api.paystack.co/transaction/verify/${req.params.reference}`,
       {
-        headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` }
+        headers: {
+          Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`
+        }
       }
     );
 
     const data = response.data.data;
 
-    if (!data.metadata || !data.metadata.orderRef) {
-      return res.status(400).json({ success: false, message: "Invalid payment metadata", order: null });
+    // 🔐 Extract your orderRef from metadata
+    const orderRef =
+      data.metadata?.custom_fields?.find(
+        f => f.variable_name === "order_id"
+      )?.value;
+
+    if (!orderRef) {
+      return res.status(400).json({
+        success: false,
+        message: "Order reference missing from metadata",
+        order: null
+      });
     }
 
-    const order = await Order.findOne({ orderRef: data.metadata.orderRef });
+    const order = await Order.findOne({ orderRef });
 
     if (!order) {
-      return res.status(404).json({ success: false, message: "Order not found", order: null });
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+        order: null
+      });
     }
 
     if (data.status === "success") {
       order.paymentStatus = "paid";
-      order.paymentReference = data.reference;
+      order.paymentReference = data.reference; // Paystack ref
       await order.save();
 
       return res.json({ success: true, order });
     }
 
     res.json({ success: false, message: "Payment not successful", order });
+
   } catch (error) {
     console.error("Paystack verify error:", error.message);
-    res.status(500).json({ success: false, message: "Verification failed", order: null });
+    res.status(500).json({
+      success: false,
+      message: "Verification failed",
+      order: null
+    });
   }
 });
 
