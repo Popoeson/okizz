@@ -221,7 +221,7 @@ document.getElementById("payBtn").addEventListener("click", async () => {
   try {
     // Generate a unique order reference
     const orderRef = `OKIZZ-${Date.now()}`;
-    localStorage.setItem("pendingOrderRef", orderRef); // save for pending page
+    localStorage.setItem("pendingOrderRef", orderRef); // Save for pending page
 
     // 1️⃣ Create order in backend
     const orderRes = await fetch(`${API_BASE}/api/orders`, {
@@ -232,7 +232,7 @@ document.getElementById("payBtn").addEventListener("click", async () => {
 
     const orderData = await orderRes.json();
     if(!orderData.success){
-      alert("Failed to create order");
+      alert("Failed to create order. Try again.");
       return;
     }
 
@@ -240,37 +240,35 @@ document.getElementById("payBtn").addEventListener("click", async () => {
 
     // 2️⃣ Initialize Paystack payment
     const handler = PaystackPop.setup({
-      key: "pk_live_9ea850872c6c1053cbf1530b95c65bdf4535048d",
+      key: "pk_live_9ea850872c6c1053cbf1530b95c65bdf4535048d", // LIVE key
       email,
       amount: order.totalAmount * 100,
       currency: "NGN",
       metadata: {
-        orderRef // webhook will use this
+        custom_fields: [
+          { display_name: "Order ID", variable_name: "order_id", value: orderRef }
+        ]
       },
       callback: function(response){
-        // Payment successful immediately (card payment)
-        localStorage.removeItem("pendingOrderRef");
-        localStorage.setItem("lastOrder", JSON.stringify(order));
-        localStorage.removeItem("cart");
-        window.location.href = `thank-you.html?order=${orderRef}`;
+        // ✅ Verify payment via backend before completing
+        verifyPayment(response.reference);
       },
       onClose: function(){
-        // User closed the popup
-        alert("Payment window closed. Complete your payment on your bank/USSD app.");
+        // User closed the popup before paying
+        alert("Payment window closed. You can complete your payment on your bank/USSD app.");
         window.location.href = `pending-payment.html?order=${orderRef}`;
       }
     });
 
-    handler.openIframe();
+    handler.openIframe(); // Show Paystack popup
 
-    // ✅ Do NOT redirect immediately — let the popup stay open
   } catch (err) {
     console.error(err);
     alert("Something went wrong. Please try again.");
   }
 });
 
-// Optional: immediate verification for instant card payments
+// Verify payment with backend
 async function verifyPayment(reference){
   try {
     const res = await fetch(`${API_BASE}/api/paystack/verify/${reference}`);
@@ -278,21 +276,28 @@ async function verifyPayment(reference){
 
     if(!data.success || !data.order){
       alert("Payment verification failed. Contact support.");
+      // Redirect to pending page
+      const pendingRef = localStorage.getItem("pendingOrderRef");
+      if(pendingRef) window.location.href = `pending-payment.html?order=${pendingRef}`;
       return;
     }
 
-    // Save last order locally
+    // Payment successful
     localStorage.setItem("lastOrder", JSON.stringify(data.order));
     localStorage.removeItem("pendingOrderRef");
     localStorage.removeItem("cart");
 
     // Redirect to thank-you page
     window.location.href = `thank-you.html?order=${data.order.orderRef}`;
+
   } catch(err){
-    console.error(err);
-    alert("Payment verification failed. Contact support.");
+    console.error("Verify payment error:", err);
+    // Redirect to pending page
+    const pendingRef = localStorage.getItem("pendingOrderRef");
+    if(pendingRef) window.location.href = `pending-payment.html?order=${pendingRef}`;
   }
 }
 </script>
+
 </body>
 </html>
