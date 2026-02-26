@@ -66,38 +66,28 @@ if (!orderRef) {
 
   async function checkPayment() {
     try {
-      // Fetch the latest order status from backend
+      // Fetch latest order
       const res = await fetch(`${API_BASE}/api/orders/ref/${orderRef}`);
       const data = await res.json();
 
-      if (data && data.paymentStatus === "paid") {
-        // ✅ Payment confirmed
-        statusMessage.textContent = "Payment confirmed! Redirecting...";
+      const status = data?.order?.paymentStatus;
 
-        // Save order locally
-        localStorage.setItem("lastOrder", JSON.stringify(data));
+      if (status === "paid") {
+        statusMessage.textContent = "Payment confirmed! Redirecting...";
+        localStorage.setItem("lastOrder", JSON.stringify(data.order));
         localStorage.removeItem("pendingOrderRef");
         localStorage.removeItem("cart");
 
-        // Short delay for UX, then redirect to thank-you page
         setTimeout(() => {
-          window.location.href = `thank-you.html?order=${data.orderRef}`;
+          window.location.href = `thank-you.html?order=${data.order.orderRef}`;
         }, 1500);
 
-      } else if (data && data.paymentStatus === "pending") {
-        // Payment still pending, retry in 5 seconds
+      } else if (status === "pending") {
         statusMessage.textContent = "Payment still pending... checking again in 5 seconds.";
         setTimeout(checkPayment, 5000);
 
-      } else if (data && data.paymentStatus === "failed") {
-        // Payment failed, user may retry
-        statusMessage.innerHTML = `
-          Payment failed. Please <a href="checkout.html">try again</a> or contact support.
-        `;
-
       } else {
-        // Unknown status, keep retrying
-        statusMessage.textContent = "Order found but payment status unknown. Retrying in 5 seconds...";
+        statusMessage.textContent = "Unknown payment status. Retrying in 5 seconds...";
         setTimeout(checkPayment, 5000);
       }
 
@@ -112,7 +102,6 @@ if (!orderRef) {
   checkPayment();
 }
 </script>
-
 
 </body>
 </html>
