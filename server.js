@@ -270,7 +270,6 @@ app.use("/api/hero", heroRouter);
 app.post("/api/orders", async (req, res) => {
   try {
     const { name, phone, email, items } = req.body;
-
     if (!name || !phone || !email || !items || items.length === 0) {
       return res.status(400).json({ error: "Invalid order data" });
     }
@@ -278,7 +277,6 @@ app.post("/api/orders", async (req, res) => {
     let total = 0;
     items.forEach(i => (total += i.price * i.quantity));
 
-    // ✅ BACKEND GENERATED (SOURCE OF TRUTH)
     const orderRef = `OKIZZ-${Date.now()}`;
 
     const order = await Order.create({
@@ -289,6 +287,7 @@ app.post("/api/orders", async (req, res) => {
       totalAmount: total,
       orderRef,
       paymentStatus: "pending"
+      // paymentReference will be set after initialization
     });
 
     res.json({ success: true, order });
@@ -303,25 +302,17 @@ app.post("/api/orders", async (req, res) => {
 app.post("/api/paystack/init", async (req, res) => {
   try {
     const { email, amount, orderRef } = req.body;
-
-    if (!email || !amount || !orderRef) {
-      return res.status(400).json({ error: "Invalid payment data" });
-    }
+    if (!email || !amount || !orderRef) return res.status(400).json({ error: "Invalid payment data" });
 
     const response = await axios.post(
       "https://api.paystack.co/transaction/initialize",
-      {
-        email,
-        amount: amount * 100,
-        reference: orderRef,     // send our human-friendly ref
-        metadata: { orderRef }
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`
-        }
-      }
+      { email, amount: amount * 100, metadata: { orderRef } },
+      { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } }
     );
+
+    // Save Paystack reference in DB for verification
+    const paystackRef = response.data.data.reference;
+    await Order.findOneAndUpdate({ orderRef }, { paymentReference: paystackRef });
 
     res.json(response.data);
   } catch (error) {
@@ -330,42 +321,23 @@ app.post("/api/paystack/init", async (req, res) => {
   }
 });
 
-/* ===========================
-   PAYSTACK VERIFICATION & WEBHOOK
-=========================== */
-
-const crypto = require("crypto");
-
-// ========= VERIFY PAYMENT ==========
+// VERIFY PAYMENT
 app.get("/api/paystack/verify/:reference", async (req, res) => {
   try {
     const reference = req.params.reference;
 
     const response = await axios.get(
       `https://api.paystack.co/transaction/verify/${reference}`,
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`
-        }
-      }
+      { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } }
     );
 
     const data = response.data.data;
 
     const order = await Order.findOne({
-      $or: [
-        { orderRef: data.metadata?.orderRef },
-        { paymentReference: reference }
-      ]
+      $or: [{ paymentReference: reference }, { orderRef: data.metadata?.orderRef }]
     });
 
-    if (!order) {
-      return res.status(404).json({
-        success: false,
-        message: "Order not found",
-        order: null
-      });
-    }
+    if (!order) return res.status(404).json({ success: false, message: "Order not found", order: null });
 
     if (data.status === "success") {
       if (order.paymentStatus !== "paid") {
@@ -373,23 +345,14 @@ app.get("/api/paystack/verify/:reference", async (req, res) => {
         order.paymentReference = reference;
         await order.save();
       }
-
       return res.json({ success: true, order });
     }
 
-    return res.json({
-      success: false,
-      message: "Payment not successful",
-      order
-    });
+    return res.json({ success: false, message: "Payment not successful", order });
 
   } catch (error) {
     console.error("Paystack verify error:", error.message);
-    res.status(500).json({
-      success: false,
-      message: "Verification failed",
-      order: null
-    });
+    res.status(500).json({ success: false, message: "Verification failed", order: null });
   }
 });
 
