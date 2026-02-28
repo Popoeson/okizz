@@ -194,17 +194,29 @@ const cartCount = document.getElementById('cartCount');
 const cartItems = document.getElementById('cartItems');
 const cartTotal = document.getElementById('cartTotal');
 
+// =================== CART LOGIC ===================
 let cart = JSON.parse(localStorage.getItem('cart')) || [];
 
-// Update cart UI
-function saveCart(){ localStorage.setItem('cart', JSON.stringify(cart)); }
-function updateCartCount(){ cartCount.textContent = cart.reduce((sum,i)=>sum+i.quantity,0); }
+// Save cart to localStorage
+function saveCart(){ 
+  localStorage.setItem('cart', JSON.stringify(cart)); 
+}
+
+// Update cart badge count
+function updateCartCount(){ 
+  cartCount.textContent = cart.reduce((sum,i)=>sum+i.quantity,0); 
+}
+
+// Render cart drawer
 function renderCart(){
   cartItems.innerHTML='';
-  let total=0;
+  let total = 0;
+
   cart.forEach(i=>{
-    const t=i.price*i.quantity; total+=t;
-    cartItems.innerHTML+=`
+    const itemTotal = i.price * i.quantity;
+    total += itemTotal;
+
+    cartItems.innerHTML += `
       <div class="cart-item">
         <img src="${i.image}">
         <div>
@@ -214,58 +226,99 @@ function renderCart(){
             <span>${i.quantity}</span>
             <button onclick="changeQty('${i._id}',1)">+</button>
           </div>
-          <div class="item-total">₦${t.toLocaleString()}</div>
+          <div class="item-total">₦${itemTotal.toLocaleString()}</div>
         </div>
       </div>
     `;
   });
-  cartTotal.textContent=`Total: ₦${total.toLocaleString()}`;
+
+  cartTotal.textContent = `Total: ₦${total.toLocaleString()}`;
 }
-function addToCart(product){
-  const existing=cart.find(i=>i._id===product._id);
-  existing?existing.quantity++:cart.push({...product,quantity:1});
-  saveCart(); updateCartCount(); renderCart();
+
+// Add ticket to cart
+function addToCart(ticket){
+  // Only include fields required by the backend
+  const cartItem = {
+    _id: ticket._id,
+    name: ticket.name,
+    price: Number(ticket.price),
+    quantity: 1,
+    image: ticket.image // optional for display only
+  };
+
+  const existing = cart.find(i=>i._id === cartItem._id);
+  if(existing){
+    existing.quantity++;
+  } else {
+    cart.push(cartItem);
+  }
+
+  saveCart();
+  updateCartCount();
+  renderCart();
 }
-function changeQty(id,delta){
-  const item=cart.find(i=>i._id===id);
+
+// Change quantity in cart
+function changeQty(id, delta){
+  const item = cart.find(i=>i._id === id);
   if(!item) return;
-  item.quantity+=delta;
-  if(item.quantity<=0) cart=cart.filter(i=>i._id!==id);
-  saveCart(); updateCartCount(); renderCart();
+
+  item.quantity += delta;
+  if(item.quantity <= 0) cart = cart.filter(i=>i._id !== id);
+
+  saveCart();
+  updateCartCount();
+  renderCart();
 }
+
+// Toggle cart drawer
 function toggleCart(){
   cartDrawer.classList.toggle('open');
   cartOverlay.classList.toggle('show');
   pageContent.classList.toggle('blur');
   renderCart();
 }
+
+// Close cart
 function closeCart(){
   cartDrawer.classList.remove('open');
   cartOverlay.classList.remove('show');
   pageContent.classList.remove('blur');
 }
-cartOverlay.onclick=closeCart;
+
+// Close when clicking overlay
+cartOverlay.onclick = closeCart;
 
 // FETCH TICKETS AND RENDER
 async function fetchTickets(){
   try {
-    const res=await fetch(`${API_BASE}/api/tickets`);
-    const tickets=await res.json();
-    productGrid.innerHTML='';
-    tickets.forEach(t=>{
-      productGrid.innerHTML+=`
-        <div class="product-card">
-          <img src="${t.image}">
-          <div class="product-info">
-            <h3>${t.name}</h3>
-            <p>${t.description}</p>
-            <span>₦${Number(t.price).toLocaleString()}</span>
-            <button onclick='addToCart(${JSON.stringify(t)})'>Buy Ticket</button>
-          </div>
+    const res = await fetch(`${API_BASE}/api/tickets`);
+    const tickets = await res.json();
+    productGrid.innerHTML = '';
+    tickets.forEach(t => {
+      // Only pass the exact fields needed for the order
+      const ticket = {
+        _id: t._id,       // important: backend requires this
+        name: t.name,
+        price: Number(t.price),
+        image: t.image
+      };
+
+      const card = document.createElement('div');
+      card.className = 'product-card';
+      card.innerHTML = `
+        <img src="${ticket.image}">
+        <div class="product-info">
+          <h3>${ticket.name}</h3>
+          <p>${t.description}</p>
+          <span>₦${ticket.price.toLocaleString()}</span>
+          <button>Buy Ticket</button>
         </div>
       `;
+      card.querySelector('button').onclick = () => addToCart(ticket);
+      productGrid.appendChild(card);
     });
-  } catch(e){ console.error('Failed to fetch tickets',e); }
+  } catch(e){ console.error('Failed to fetch tickets', e); }
 }
 
 // INIT
