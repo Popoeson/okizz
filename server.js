@@ -63,6 +63,7 @@ const heroSchema = new mongoose.Schema(
 const Hero = mongoose.model("Hero", heroSchema);
 
 // Order
+// Order
 const orderSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
@@ -71,7 +72,7 @@ const orderSchema = new mongoose.Schema(
     items: {
       type: [
         {
-          ticketId: { type: mongoose.Schema.Types.ObjectId, ref: "Ticket", required: true },
+          _id: { type: mongoose.Schema.Types.ObjectId, ref: "Ticket", required: true }, // <-- updated
           name: { type: String, required: true },
           price: { type: Number, required: true },
           quantity: { type: Number, required: true }
@@ -284,14 +285,22 @@ app.post("/api/orders", async (req, res) => {
       return res.status(400).json({ error: "Invalid order data" });
     }
 
-    const totalAmount = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+    // Map items to ensure only the required fields are stored
+    const orderItems = items.map(i => ({
+      _id: i._id,
+      name: i.name,
+      price: i.price,
+      quantity: i.quantity
+    }));
+
+    const totalAmount = orderItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
     const orderRef = `OKIZZ-${Date.now()}`;
 
     const order = await Order.create({
       name,
       phone,
       email,
-      items,
+      items: orderItems,
       totalAmount,
       orderRef,
       paymentStatus: "pending",
@@ -303,7 +312,6 @@ app.post("/api/orders", async (req, res) => {
     res.status(500).json({ error: "Failed to create order" });
   }
 });
-
 /* -------- INITIALIZE PAYSTACK -------- */
 app.post("/api/paystack/init", async (req, res) => {
   try {
