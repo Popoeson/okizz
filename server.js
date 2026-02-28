@@ -371,19 +371,27 @@ app.post("/api/paystack/webhook", express.raw({ type: "application/json" }), asy
     const signature = req.headers["x-paystack-signature"];
     const hash = crypto
       .createHmac("sha512", process.env.PAYSTACK_SECRET_KEY)
-      .update(req.body)
+      .update(req.body) // raw buffer
       .digest("hex");
 
-    if (hash !== signature) return res.sendStatus(400);
+    if (hash !== signature) {
+      console.error("Webhook signature mismatch!");
+      return res.sendStatus(400);
+    }
 
-    const event = JSON.parse(req.body.toString());
+    // Parse after verifying signature
+    const event = JSON.parse(req.body.toString("utf8"));
+
     if (event.event !== "charge.success") return res.sendStatus(200);
 
     const data = event.data;
     const reference = data.reference;
     const orderRef = data.metadata?.orderRef;
 
-    const order = await Order.findOne({ $or: [{ orderRef }, { paymentReference: reference }] });
+    const order = await Order.findOne({
+      $or: [{ orderRef }, { paymentReference: reference }]
+    });
+
     if (!order || order.paymentStatus === "paid") return res.sendStatus(200);
 
     // Verify amount
