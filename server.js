@@ -407,52 +407,53 @@ app.post(
         .digest("hex");
 
       if (hash !== signature) {
-        console.warn("❌ Invalid Paystack signature");
         return res.sendStatus(400);
       }
 
       const event = JSON.parse(req.body.toString());
       const data = event.data;
 
-      // ✅ Handle BOTH charge + transfer success
-      const successEvents = ["charge.success", "transfer.success"];
-      if (!successEvents.includes(event.event)) {
+      if (event.event !== "charge.success") {
         return res.sendStatus(200);
       }
 
+      const reference = data.reference;
       const orderRef = data.metadata?.orderRef;
-      if (!orderRef) return res.sendStatus(200);
 
-      const order = await Order.findOne({ orderRef });
-      if (!order) return res.sendStatus(200);
+      // 🔑 FIND ORDER SAFELY
+      const order = await Order.findOne({
+        $or: [
+          { orderRef },
+          { paymentReference: reference }
+        ]
+      });
 
-      // 🔁 Idempotency
+      if (!order) {
+        console.warn("Webhook: Order not found", reference);
+        return res.sendStatus(200);
+      }
+
       if (order.paymentStatus === "paid") {
         return res.sendStatus(200);
       }
 
-      // 🔐 Amount verification
+      // Amount verification
       if (data.amount !== order.totalAmount * 100) {
-        console.error("❌ Amount mismatch", {
-          orderRef,
-          expected: order.totalAmount * 100,
-          paid: data.amount
-        });
+        console.error("Amount mismatch", reference);
         return res.sendStatus(200);
       }
 
-      // ✅ Mark as paid
       order.paymentStatus = "paid";
-      order.paymentReference = data.reference;
+      order.paymentReference = reference;
       await order.save();
 
-      console.log(`✅ Order ${orderRef} marked PAID via webhook`);
+      console.log(`✅ Order ${order.orderRef} PAID via webhook`);
 
-      return res.sendStatus(200);
+      res.sendStatus(200);
 
     } catch (err) {
-      console.error("🔥 Paystack webhook error:", err);
-      return res.sendStatus(500);
+      console.error("Webhook error:", err);
+      res.sendStatus(500);
     }
   }
 );
