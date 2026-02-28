@@ -172,6 +172,24 @@ header{
 const API_BASE = "https://okizz.onrender.com";
 let cart = JSON.parse(localStorage.getItem("cart")) || [];
 
+(async function checkPendingPayment(){
+  const pendingRef = localStorage.getItem("pendingOrderRef");
+  if(!pendingRef) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/api/orders/ref/${pendingRef}`);
+    const order = await res.json();
+
+    if(order.paymentStatus === "paid"){
+      localStorage.removeItem("pendingOrderRef");
+      localStorage.removeItem("cart");
+      window.location.href = `thank-you.html?order=${order.orderRef}`;
+    }
+  } catch(e){
+    console.warn("Pending check failed");
+  }
+})();
+
 const cartCount  = document.getElementById("cartCount");
 const orderItems = document.getElementById("orderItems");
 const orderTotal = document.getElementById("orderTotal");
