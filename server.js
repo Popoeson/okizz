@@ -5,6 +5,9 @@ const cors = require("cors");
 const multer = require("multer");
 const axios = require("axios");
 const cloudinary = require("cloudinary").v2;
+const bodyParser = require("body-parser");
+const crypto = require("crypto");
+
 
 const app = express();
 
@@ -374,51 +377,49 @@ app.get("/api/paystack/verify/:reference", async (req, res) => {
 });
 
 /* -------- PAYSTACK WEBHOOK -------- */
-app.post("/api/paystack/webhook", express.raw({ type: "application/json" }), async (req, res) => {
-  try {
-    const signature = req.headers["x-paystack-signature"];
-    const hash = crypto
-      .createHmac("sha512", process.env.PAYSTACK_SECRET_KEY)
-      .update(req.body) // raw buffer
-      .digest("hex");
+app.post(
+  "/api/paystack/webhook",
+  bodyParser.raw({ type: "*/*" }), // get raw body for HMAC
+  async (req, res) => {
+    try {
+      const secret = process.env.PAYSTACK_SECRET_KEY;
+      const hash = crypto
+        .createHmac("sha512", secret)
+        .update(req.body) // raw buffer
+        .digest("hex");
 
-    if (hash !== signature) {
-      console.error("Webhook signature mismatch!");
-      return res.sendStatus(400);
+      if (hash !== req.headers["x-paystack-signature"]) {
+        return res.status(401).send("Invalid signature");
+      }
+
+      // Parse JSON after HMAC verification
+      const event = JSON.parse(req.body.toString());
+      const { event: eventType, data } = event;
+
+      // Only handle successful charges
+      if (eventType === "charge.success") {
+        const orderRef = data.metadata?.orderRef;
+        if (!orderRef) return res.status(400).send("No orderRef found");
+
+        // Update order in DB
+        const order = await Order.findOneAndUpdate(
+          { orderRef },
+          { paymentStatus: "paid", paystackReference: data.reference },
+          { new: true }
+        );
+
+        if (!order) return res.status(404).send("Order not found");
+
+        console.log("Order updated via webhook:", orderRef);
+      }
+
+      res.sendStatus(200); // Must respond 200 to acknowledge webhook
+    } catch (err) {
+      console.error("Webhook error:", err);
+      res.sendStatus(500);
     }
-
-    // Parse after verifying signature
-    const event = JSON.parse(req.body.toString("utf8"));
-
-    if (event.event !== "charge.success") return res.sendStatus(200);
-
-    const data = event.data;
-    const reference = data.reference;
-    const orderRef = data.metadata?.orderRef;
-
-    const order = await Order.findOne({
-      $or: [{ orderRef }, { paymentReference: reference }]
-    });
-
-    if (!order || order.paymentStatus === "paid") return res.sendStatus(200);
-
-    // Verify amount
-    if (data.amount !== order.totalAmount * 100) {
-      console.error("Webhook: Amount mismatch", reference);
-      return res.sendStatus(200);
-    }
-
-    order.paymentStatus = "paid";
-    order.paymentReference = reference;
-    await order.save();
-
-    console.log(`✅ Order ${order.orderRef} PAID via webhook`);
-    res.sendStatus(200);
-  } catch (err) {
-    console.error("Webhook error:", err);
-    res.sendStatus(500);
   }
-});
+);
 
 /* -------- GET SINGLE ORDER BY REF -------- */
 app.get("/api/orders/ref/:orderRef", async (req, res) => {
