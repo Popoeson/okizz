@@ -210,34 +210,20 @@ header{
 </div>
 
 <script src="https://js.paystack.co/v1/inline.js"></script>
+
 <script>
 const API_BASE = "https://okizz.onrender.com";
 let cart = JSON.parse(localStorage.getItem("cart")) || [];
 
-/* ---------- AUTO CHECK ON LOAD ---------- */
-(async function(){
-  const ref = localStorage.getItem("pendingOrderRef");
-  if(!ref) return;
-
-  try{
-    const res = await fetch(`${API_BASE}/api/orders/ref/${ref}`);
-    const order = await res.json();
-
-    if(order.paymentStatus === "paid"){
-      localStorage.removeItem("pendingOrderRef");
-      localStorage.removeItem("cart");
-      window.location.href = `thank-you.html?order=${order.orderRef}`;
-    }
-  }catch(err){
-    console.error("Auto check error:", err);
-  }
-})();
-
-/* ---------- CART ---------- */
+/* ---------- DOM ELEMENTS ---------- */
 const cartCount = document.getElementById("cartCount");
 const orderItems = document.getElementById("orderItems");
 const orderTotal = document.getElementById("orderTotal");
+const manualBox = document.getElementById("manualConfirmBox");
+const confirmBtn = document.getElementById("confirmPaymentBtn");
+const statusText = document.getElementById("confirmStatus");
 
+/* ---------- CART DISPLAY ---------- */
 cartCount.textContent = cart.reduce((s,i)=>s+i.quantity,0);
 
 let total = 0;
@@ -250,6 +236,28 @@ cart.forEach(i=>{
     </div>`;
 });
 orderTotal.textContent = `Total: ₦${total.toLocaleString()}`;
+
+/* ---------- CHECK PENDING ORDER ON LOAD ---------- */
+(async function(){
+  const ref = localStorage.getItem("pendingOrderRef");
+  if(!ref) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/api/orders/ref/${ref}`);
+    const order = await res.json();
+
+    if(order.paymentStatus === "paid"){
+      localStorage.removeItem("pendingOrderRef");
+      localStorage.removeItem("cart");
+      window.location.href = `thank-you.html?order=${order.orderRef}`;
+    } else {
+      // Pending → show manual confirm
+      manualBox.style.display = "block";
+    }
+  } catch(err) {
+    console.error("Pending order check error:", err);
+  }
+})();
 
 /* ---------- PAY ---------- */
 document.getElementById("payBtn").onclick = async ()=>{
@@ -290,13 +298,16 @@ document.getElementById("payBtn").onclick = async ()=>{
       reference: order.orderRef,
       metadata: { orderRef: order.orderRef },
       callback: r => verifyPayment(r.reference),
-      onClose: ()=> location.href=`pending-payment.html?order=${order.orderRef}`
+      onClose: ()=> {
+        // Show manual confirm if user closes iframe
+        manualBox.style.display = "block";
+      }
     });
     handler.openIframe();
 
-    // 4️⃣ Show manual confirmation if user takes too long
+    // 4️⃣ Show manual confirm after 10s anyway
     setTimeout(()=>{
-      document.getElementById("manualConfirmBox").style.display="block";
+      manualBox.style.display = "block";
     },10000);
 
   } catch(err){
@@ -316,22 +327,23 @@ async function verifyPayment(ref){
       localStorage.removeItem("cart");
       window.location.href = `thank-you.html?order=${data.order.orderRef}`;
     } else {
-      alert("Payment not successful yet. Try manual confirmation if necessary.");
+      alert("Payment not successful yet. Use manual confirmation if needed.");
+      manualBox.style.display = "block";
     }
   } catch(err){
     console.error("Verify error:", err);
-    alert("Verification failed. Try manual confirmation.");
+    alert("Verification failed. Use manual confirmation.");
+    manualBox.style.display = "block";
   }
 }
 
 /* ---------- MANUAL CONFIRM ---------- */
-document.getElementById("confirmPaymentBtn").onclick = async ()=>{
-  const status = document.getElementById("confirmStatus");
+confirmBtn.onclick = async ()=>{
   const ref = localStorage.getItem("pendingOrderRef");
 
   if(!ref){
-    status.textContent = "No transaction detected.";
-    status.style.display = "block";
+    statusText.textContent = "No transaction detected.";
+    statusText.style.display = "block";
     return;
   }
 
@@ -344,13 +356,13 @@ document.getElementById("confirmPaymentBtn").onclick = async ()=>{
       localStorage.removeItem("cart");
       window.location.href = `thank-you.html?order=${data.order.orderRef}`;
     } else {
-      status.textContent = "Payment not completed yet. Please try again later.";
-      status.style.display = "block";
+      statusText.textContent = "Payment not completed yet. Try again later.";
+      statusText.style.display = "block";
     }
   } catch(err){
     console.error("Manual confirm error:", err);
-    status.textContent = "Could not confirm payment. Try again.";
-    status.style.display = "block";
+    statusText.textContent = "Could not confirm payment. Try again.";
+    statusText.style.display = "block";
   }
 };
 </script>
