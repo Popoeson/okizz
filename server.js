@@ -353,6 +353,13 @@ app.get("/api/paystack/verify/:reference", async (req, res) => {
     // ✅ Extract orderRef from metadata
     const orderRef = data.metadata?.orderRef;
 
+const order = await Order.findOne({
+  $or: [
+    { orderRef },
+    { paymentReference: data.reference }
+  ]
+});
+
     if (!orderRef) {
       return res.status(400).json({
         success: false,
