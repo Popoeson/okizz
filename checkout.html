@@ -155,49 +155,70 @@ orderTotal.textContent = `Total: ₦${total.toLocaleString()}`;
 })();
 
 /* ---------- PAY ---------- */
-document.getElementById("payBtn").onclick = async ()=>{
+document.getElementById("payBtn").onclick = async () => {
   const nameVal = document.getElementById("name").value.trim();
   const phoneVal = document.getElementById("phone").value.trim();
   const emailVal = document.getElementById("email").value.trim();
-  if(!nameVal || !phoneVal || !emailVal) return alert("Fill all fields");
-  if(cart.length === 0) return alert("Cart is empty");
+
+  if (!nameVal || !phoneVal || !emailVal) {
+    return alert("Fill all fields");
+  }
+  if (cart.length === 0) return alert("Cart is empty");
 
   try {
+    // Map cart to include ticketId (required by schema)
+    const itemsToSend = cart.map(i => ({
+      ticketId: i.id || i._id, // ensure we pick the right property
+      name: i.name,
+      price: i.price,
+      quantity: i.quantity
+    }));
+
     // Create order
     const resOrder = await fetch(`${API_BASE}/api/orders`, {
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({name:nameVal, phone:phoneVal, email:emailVal, items:cart})
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: nameVal,
+        phone: phoneVal,
+        email: emailVal,
+        items: itemsToSend
+      })
     });
+
     const dataOrder = await resOrder.json();
-    if(!dataOrder.success) return alert("Order creation failed");
+    if (!dataOrder.success) return alert("Order creation failed");
 
     const order = dataOrder.order;
 
     // Initialize Paystack
     const resInit = await fetch(`${API_BASE}/api/paystack/init`, {
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({ email: emailVal, amount: order.totalAmount, orderRef: order.orderRef })
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: emailVal, amount: order.totalAmount, orderRef: order.orderRef })
     });
     const initData = await resInit.json();
-    if(!initData.status) return alert("Payment initialization failed");
+    if (!initData.status) return alert("Payment initialization failed");
 
     // Save pending order (store only orderRef)
     localStorage.setItem("pendingOrder", JSON.stringify({ orderRef: order.orderRef }));
 
+    // Launch Paystack inline
     const handler = PaystackPop.setup({
-      key:"pk_live_9ea850872c6c1053cbf1530b95c65bdf4535048d",
+      key: "pk_live_9ea850872c6c1053cbf1530b95c65bdf4535048d",
       email: emailVal,
-      amount: order.totalAmount*100,
+      amount: order.totalAmount * 100,
       reference: initData.data.reference,
       metadata: { orderRef: order.orderRef },
       callback: r => verifyPayment(order.orderRef),
-      onClose: ()=>{ manualBox.style.display = "block"; }
+      onClose: () => { manualBox.style.display = "block"; }
     });
     handler.openIframe();
 
-  } catch(err){ console.error(err); alert("Checkout error"); }
+  } catch (err) {
+    console.error(err);
+    alert("Checkout error");
+  }
 };
 
 /* ---------- VERIFY PAYMENT ---------- */
