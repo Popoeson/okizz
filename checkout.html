@@ -210,7 +210,6 @@ header{
 </div>
 
 <script src="https://js.paystack.co/v1/inline.js"></script>
-
 <script>
 const API_BASE = "https://okizz.onrender.com";
 let cart = JSON.parse(localStorage.getItem("cart")) || [];
@@ -229,7 +228,9 @@ let cart = JSON.parse(localStorage.getItem("cart")) || [];
       localStorage.removeItem("cart");
       window.location.href = `thank-you.html?order=${order.orderRef}`;
     }
-  }catch{}
+  }catch(err){
+    console.error("Auto check error:", err);
+  }
 })();
 
 /* ---------- CART ---------- */
@@ -252,50 +253,75 @@ orderTotal.textContent = `Total: ₦${total.toLocaleString()}`;
 
 /* ---------- PAY ---------- */
 document.getElementById("payBtn").onclick = async ()=>{
-  const name = name.value.trim();
-  const phone = phone.value.trim();
-  const email = email.value.trim();
+  const nameVal = document.getElementById("name").value.trim();
+  const phoneVal = document.getElementById("phone").value.trim();
+  const emailVal = document.getElementById("email").value.trim();
 
-  if(!name || !phone || !email) return alert("Fill all fields");
+  if(!nameVal || !phoneVal || !emailVal) return alert("Fill all fields");
+  if(cart.length === 0) return alert("Cart is empty");
 
-  const res = await fetch(`${API_BASE}/api/orders`,{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({name,phone,email,items:cart})
-  });
+  try {
+    // 1️⃣ Create order on backend
+    const resOrder = await fetch(`${API_BASE}/api/orders`, {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({name: nameVal, phone: phoneVal, email: emailVal, items: cart})
+    });
+    const dataOrder = await resOrder.json();
+    if(!dataOrder.success) return alert("Order creation failed");
 
-  const data = await res.json();
-  if(!data.success) return alert("Order failed");
+    const { order } = dataOrder;
+    localStorage.setItem("pendingOrderRef", order.orderRef);
 
-  localStorage.setItem("pendingOrderRef", data.order.orderRef);
+    // 2️⃣ Initialize Paystack via backend
+    const resInit = await fetch(`${API_BASE}/api/paystack/init`, {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ email: emailVal, amount: order.totalAmount, orderRef: order.orderRef })
+    });
+    const initData = await resInit.json();
+    if(!initData.status) return alert("Payment initialization failed");
 
-  const handler = PaystackPop.setup({
-    key:"pk_live_9ea850872c6c1053cbf1530b95c65bdf4535048d",
-    email,
-    amount:data.order.totalAmount*100,
-    metadata:{orderRef:data.order.orderRef},
-    callback:r=>verify(r.reference),
-    onClose:()=>location.href=`pending-payment.html?order=${data.order.orderRef}`
-  });
+    // 3️⃣ Open Paystack iframe
+    const handler = PaystackPop.setup({
+      key:"pk_live_9ea850872c6c1053cbf1530b95c65bdf4535048d",
+      email: emailVal,
+      amount: order.totalAmount*100,
+      reference: order.orderRef,
+      metadata: { orderRef: order.orderRef },
+      callback: r => verifyPayment(r.reference),
+      onClose: ()=> location.href=`pending-payment.html?order=${order.orderRef}`
+    });
+    handler.openIframe();
 
-  handler.openIframe();
+    // 4️⃣ Show manual confirmation if user takes too long
+    setTimeout(()=>{
+      document.getElementById("manualConfirmBox").style.display="block";
+    },10000);
 
-  setTimeout(()=>{
-    document.getElementById("manualConfirmBox").style.display="block";
-  },10000);
+  } catch(err){
+    console.error("Checkout error:", err);
+    alert("Something went wrong. Try again.");
+  }
 };
 
-/* ---------- VERIFY ---------- */
-async function verify(ref){
+/* ---------- VERIFY PAYMENT ---------- */
+async function verifyPayment(ref){
   try{
     const res = await fetch(`${API_BASE}/api/paystack/verify/${ref}`);
-    const d = await res.json();
-    if(d.success){
+    const data = await res.json();
+
+    if(data.success){
       localStorage.removeItem("pendingOrderRef");
       localStorage.removeItem("cart");
-      location.href=`thank-you.html?order=${d.order.orderRef}`;
+      window.location.href = `thank-you.html?order=${data.order.orderRef}`;
+    } else {
+      alert("Payment not successful yet. Try manual confirmation if necessary.");
     }
-  }catch{}
+  } catch(err){
+    console.error("Verify error:", err);
+    alert("Verification failed. Try manual confirmation.");
+  }
 }
 
 /* ---------- MANUAL CONFIRM ---------- */
@@ -304,28 +330,29 @@ document.getElementById("confirmPaymentBtn").onclick = async ()=>{
   const ref = localStorage.getItem("pendingOrderRef");
 
   if(!ref){
-    status.textContent="No transaction detected.";
-    status.style.display="block";
+    status.textContent = "No transaction detected.";
+    status.style.display = "block";
     return;
   }
 
   try{
-    const res = await fetch(`${API_BASE}/api/orders/ref/${ref}`);
-    const order = await res.json();
+    const res = await fetch(`${API_BASE}/api/paystack/verify/${ref}`);
+    const data = await res.json();
 
-    if(order.paymentStatus === "paid"){
+    if(data.success){
       localStorage.removeItem("pendingOrderRef");
       localStorage.removeItem("cart");
-      location.href=`thank-you.html?order=${order.orderRef}`;
-    }else{
-      location.href=`pending-payment.html?order=${ref}`;
+      window.location.href = `thank-you.html?order=${data.order.orderRef}`;
+    } else {
+      status.textContent = "Payment not completed yet. Please try again later.";
+      status.style.display = "block";
     }
-  }catch{
-    status.textContent="No transaction detected.";
-    status.style.display="block";
+  } catch(err){
+    console.error("Manual confirm error:", err);
+    status.textContent = "Could not confirm payment. Try again.";
+    status.style.display = "block";
   }
 };
 </script>
-
 </body>
 </html>
