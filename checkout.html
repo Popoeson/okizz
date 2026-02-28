@@ -153,12 +153,12 @@ document.getElementById("payBtn").onclick = async () => {
 
   try {
     // Prepare cart items for backend
-    const itemsToSend = cart.map(i => ({
-      ticketId: i._id,
-      name: i.name,
-      price: i.price,
-      quantity: i.quantity
-    }));
+const itemsToSend = cart.map(i => ({
+  _id: i._id,  // <-- backend requires this
+  name: i.name,
+  price: i.price,
+  quantity: i.quantity
+}));
 
     // 1️⃣ Create order in backend
     const resOrder = await fetch(`${API_BASE}/api/orders`, {
