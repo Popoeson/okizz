@@ -393,44 +393,63 @@ app.get("/api/paystack/verify/:reference", async (req, res) => {
 // ===== PAYSTACK WEBHOOK =====
 app.post(
   "/api/paystack/webhook",
-  express.raw({ type: "application/json" }), // ✅ raw body required for signature verification
+  express.raw({ type: "application/json" }),
   async (req, res) => {
     try {
-      // 🔐 Verify Paystack signature
+      const signature = req.headers["x-paystack-signature"];
+
       const hash = crypto
         .createHmac("sha512", process.env.PAYSTACK_SECRET_KEY)
         .update(req.body)
         .digest("hex");
 
-      if (hash !== req.headers["x-paystack-signature"]) {
+      if (hash !== signature) {
+        console.warn("❌ Invalid Paystack signature");
         return res.sendStatus(400);
       }
 
       const event = JSON.parse(req.body.toString());
       const data = event.data;
 
-      // Only handle successful charges
-      if (event.event === "charge.success") {
-        const orderRef = data.metadata?.orderRef;
-        if (!orderRef) return res.sendStatus(200);
-
-        const order = await Order.findOne({ orderRef });
-        if (!order) return res.sendStatus(200);
-
-        // Prevent double updates
-        if (order.paymentStatus !== "paid") {
-          order.paymentStatus = "paid";
-          order.paymentReference = data.reference;
-          await order.save();
-          console.log(`Order ${orderRef} marked as paid via webhook`);
-        }
+      // ✅ Handle BOTH charge + transfer success
+      const successEvents = ["charge.success", "transfer.success"];
+      if (!successEvents.includes(event.event)) {
+        return res.sendStatus(200);
       }
 
-      res.sendStatus(200);
+      const orderRef = data.metadata?.orderRef;
+      if (!orderRef) return res.sendStatus(200);
+
+      const order = await Order.findOne({ orderRef });
+      if (!order) return res.sendStatus(200);
+
+      // 🔁 Idempotency
+      if (order.paymentStatus === "paid") {
+        return res.sendStatus(200);
+      }
+
+      // 🔐 Amount verification
+      if (data.amount !== order.totalAmount * 100) {
+        console.error("❌ Amount mismatch", {
+          orderRef,
+          expected: order.totalAmount * 100,
+          paid: data.amount
+        });
+        return res.sendStatus(200);
+      }
+
+      // ✅ Mark as paid
+      order.paymentStatus = "paid";
+      order.paymentReference = data.reference;
+      await order.save();
+
+      console.log(`✅ Order ${orderRef} marked PAID via webhook`);
+
+      return res.sendStatus(200);
 
     } catch (err) {
-      console.error("Webhook error:", err.message);
-      res.sendStatus(500);
+      console.error("🔥 Paystack webhook error:", err);
+      return res.sendStatus(500);
     }
   }
 );
