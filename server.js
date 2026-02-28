@@ -271,10 +271,12 @@ heroRouter.delete("/:id", async (req, res) => {
 app.use("/api/hero", heroRouter);
 
 /* =====================
-   CHECKOUT & PAYSTACK (Updated)
+   CHECKOUT & PAYSTACK (Optimized)
 ===================== */
 
-// CREATE ORDER
+const crypto = require("crypto");
+
+/* -------- CREATE ORDER -------- */
 app.post("/api/orders", async (req, res) => {
   try {
     const { name, phone, email, items } = req.body;
@@ -282,9 +284,7 @@ app.post("/api/orders", async (req, res) => {
       return res.status(400).json({ error: "Invalid order data" });
     }
 
-    let total = 0;
-    items.forEach(i => (total += i.price * i.quantity));
-
+    const totalAmount = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
     const orderRef = `OKIZZ-${Date.now()}`;
 
     const order = await Order.create({
@@ -292,25 +292,24 @@ app.post("/api/orders", async (req, res) => {
       phone,
       email,
       items,
-      totalAmount: total,
+      totalAmount,
       orderRef,
-      paymentStatus: "pending"
-      // paymentReference will be set after initialization
+      paymentStatus: "pending",
     });
 
     res.json({ success: true, order });
-
-  } catch (error) {
-    console.error("Create order error:", error.message);
+  } catch (err) {
+    console.error("Create order error:", err.message);
     res.status(500).json({ error: "Failed to create order" });
   }
 });
 
-// INITIALIZE PAYMENT
+/* -------- INITIALIZE PAYSTACK -------- */
 app.post("/api/paystack/init", async (req, res) => {
   try {
     const { email, amount, orderRef } = req.body;
-    if (!email || !amount || !orderRef) return res.status(400).json({ error: "Invalid payment data" });
+    if (!email || !amount || !orderRef)
+      return res.status(400).json({ error: "Invalid payment data" });
 
     const response = await axios.post(
       "https://api.paystack.co/transaction/initialize",
@@ -318,18 +317,23 @@ app.post("/api/paystack/init", async (req, res) => {
       { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } }
     );
 
-    // Save Paystack reference in DB for verification
     const paystackRef = response.data.data.reference;
-    await Order.findOneAndUpdate({ orderRef }, { paymentReference: paystackRef });
+
+    // Store Paystack reference in the order
+    await Order.findOneAndUpdate(
+      { orderRef },
+      { paymentReference: paystackRef },
+      { new: true }
+    );
 
     res.json(response.data);
-  } catch (error) {
-    console.error("Paystack init error:", error.message);
-    res.status(500).json({ error: "Payment init failed" });
+  } catch (err) {
+    console.error("Paystack init error:", err.message);
+    res.status(500).json({ error: "Payment initialization failed" });
   }
 });
 
-// VERIFY PAYMENT
+/* -------- VERIFY PAYMENT -------- */
 app.get("/api/paystack/verify/:reference", async (req, res) => {
   try {
     const reference = req.params.reference;
@@ -342,101 +346,79 @@ app.get("/api/paystack/verify/:reference", async (req, res) => {
     const data = response.data.data;
 
     const order = await Order.findOne({
-      $or: [{ paymentReference: reference }, { orderRef: data.metadata?.orderRef }]
+      $or: [{ paymentReference: reference }, { orderRef: data.metadata?.orderRef }],
     });
 
     if (!order) return res.status(404).json({ success: false, message: "Order not found", order: null });
 
-    if (data.status === "success") {
-      if (order.paymentStatus !== "paid") {
-        order.paymentStatus = "paid";
-        order.paymentReference = reference;
-        await order.save();
-      }
-      return res.json({ success: true, order });
+    if (data.status === "success" && order.paymentStatus !== "paid") {
+      // Update order
+      order.paymentStatus = "paid";
+      order.paymentReference = reference;
+      await order.save();
     }
 
-    return res.json({ success: false, message: "Payment not successful", order });
-
-  } catch (error) {
-    console.error("Paystack verify error:", error.message);
+    res.json({ success: data.status === "success", order });
+  } catch (err) {
+    console.error("Paystack verify error:", err.message);
     res.status(500).json({ success: false, message: "Verification failed", order: null });
   }
 });
 
-// ===== PAYSTACK WEBHOOK =====
-app.post(
-  "/api/paystack/webhook",
-  express.raw({ type: "application/json" }),
-  async (req, res) => {
-    try {
-      const signature = req.headers["x-paystack-signature"];
+/* -------- PAYSTACK WEBHOOK -------- */
+app.post("/api/paystack/webhook", express.raw({ type: "application/json" }), async (req, res) => {
+  try {
+    const signature = req.headers["x-paystack-signature"];
+    const hash = crypto
+      .createHmac("sha512", process.env.PAYSTACK_SECRET_KEY)
+      .update(req.body)
+      .digest("hex");
 
-      const hash = crypto
-        .createHmac("sha512", process.env.PAYSTACK_SECRET_KEY)
-        .update(req.body)
-        .digest("hex");
+    if (hash !== signature) return res.sendStatus(400);
 
-      if (hash !== signature) {
-        return res.sendStatus(400);
-      }
+    const event = JSON.parse(req.body.toString());
+    if (event.event !== "charge.success") return res.sendStatus(200);
 
-      const event = JSON.parse(req.body.toString());
-      const data = event.data;
+    const data = event.data;
+    const reference = data.reference;
+    const orderRef = data.metadata?.orderRef;
 
-      if (event.event !== "charge.success") {
-        return res.sendStatus(200);
-      }
+    const order = await Order.findOne({ $or: [{ orderRef }, { paymentReference: reference }] });
+    if (!order || order.paymentStatus === "paid") return res.sendStatus(200);
 
-      const reference = data.reference;
-      const orderRef = data.metadata?.orderRef;
-
-      // 🔑 FIND ORDER SAFELY
-      const order = await Order.findOne({
-        $or: [
-          { orderRef },
-          { paymentReference: reference }
-        ]
-      });
-
-      if (!order) {
-        console.warn("Webhook: Order not found", reference);
-        return res.sendStatus(200);
-      }
-
-      if (order.paymentStatus === "paid") {
-        return res.sendStatus(200);
-      }
-
-      // Amount verification
-      if (data.amount !== order.totalAmount * 100) {
-        console.error("Amount mismatch", reference);
-        return res.sendStatus(200);
-      }
-
-      order.paymentStatus = "paid";
-      order.paymentReference = reference;
-      await order.save();
-
-      console.log(`✅ Order ${order.orderRef} PAID via webhook`);
-
-      res.sendStatus(200);
-
-    } catch (err) {
-      console.error("Webhook error:", err);
-      res.sendStatus(500);
+    // Verify amount
+    if (data.amount !== order.totalAmount * 100) {
+      console.error("Webhook: Amount mismatch", reference);
+      return res.sendStatus(200);
     }
-  }
-);
 
-// GET SINGLE ORDER BY REF (optional, easier for frontend)
+    order.paymentStatus = "paid";
+    order.paymentReference = reference;
+    await order.save();
+
+    console.log(`✅ Order ${order.orderRef} PAID via webhook`);
+    res.sendStatus(200);
+  } catch (err) {
+    console.error("Webhook error:", err);
+    res.sendStatus(500);
+  }
+});
+
+/* -------- GET SINGLE ORDER BY REF -------- */
 app.get("/api/orders/ref/:orderRef", async (req, res) => {
   try {
     const order = await Order.findOne({ orderRef: req.params.orderRef });
     if (!order) return res.status(404).json({ error: "Order not found" });
-    res.json(order);
-  } catch (error) {
-    console.error("Fetch order error:", error.message);
+
+    res.json({
+      orderRef: order.orderRef,
+      paymentStatus: order.paymentStatus,
+      paystackReference: order.paymentReference,
+      totalAmount: order.totalAmount,
+      items: order.items,
+    });
+  } catch (err) {
+    console.error("Fetch order error:", err.message);
     res.status(500).json({ error: "Failed to fetch order" });
   }
 });
