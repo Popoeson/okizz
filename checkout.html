@@ -17,142 +17,29 @@
   --text-dark:#2A2A2A;
   --accent-olive:#6B8E23;
 }
-
 *{margin:0;padding:0;box-sizing:border-box;}
-body{
-  font-family:"Inter",sans-serif;
-  background:var(--bg-main);
-  color:var(--text-dark);
-}
+body{font-family:"Inter",sans-serif;background:var(--bg-main);color:var(--text-dark);}
 h1,h2,h3{font-family:"Playfair Display",serif;}
-
-header{
-  position:fixed;
-  top:0;
-  width:100%;
-  background:rgba(255,255,255,0.96);
-  z-index:1000;
-  box-shadow:0 2px 6px rgba(0,0,0,0.05);
-}
-.header-top{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  padding:16px 24px;
-}
+header{position:fixed;top:0;width:100%;background:rgba(255,255,255,0.96);z-index:1000;box-shadow:0 2px 6px rgba(0,0,0,0.05);}
+.header-top{display:flex;justify-content:space-between;align-items:center;padding:16px 24px;}
 .logo{font-size:22px;letter-spacing:2px;}
 .cart-btn{position:relative;cursor:pointer;}
-.cart-btn span{
-  position:absolute;
-  top:-6px; right:-8px;
-  background:var(--accent-olive);
-  color:#fff;
-  font-size:10px;
-  padding:2px 6px;
-  border-radius:50%;
-}
-
+.cart-btn span{position:absolute;top:-6px;right:-8px;background:var(--accent-olive);color:#fff;font-size:10px;padding:2px 6px;border-radius:50%;}
 .header-spacer{height:70px;}
-
-.page-content{
-  max-width:900px;
-  margin:auto;
-  padding:20px 16px 60px;
-}
-
-.checkout-section{
-  display:flex;
-  flex-wrap:wrap;
-  gap:24px;
-}
-
-.checkout-form, .order-summary{
-  background:#fff;
-  border-radius:12px;
-  padding:20px;
-  box-shadow:0 3px 10px rgba(0,0,0,0.05);
-  flex:1 1 400px;
-}
-
-.checkout-form h2, .order-summary h2{
-  margin-bottom:16px;
-}
-
-.checkout-form label{
-  display:block;
-  margin:8px 0 4px;
-  font-size:0.9rem;
-}
-
-.checkout-form input{
-  width:100%;
-  padding:10px;
-  border-radius:8px;
-  border:1px solid #ccc;
-  margin-bottom:12px;
-  font-size:0.9rem;
-}
-
-.order-item{
-  display:flex;
-  justify-content:space-between;
-  margin-bottom:8px;
-}
-
-.order-total{
-  margin-top:12px;
-  font-weight:600;
-  font-size:1rem;
-  color:var(--accent-olive);
-  border-top:1px solid #eee;
-  padding-top:8px;
-}
-
-.paystack-btn{
-  margin-top:20px;
-  display:block;
-  width:100%;
-  padding:12px;
-  background:var(--accent-olive);
-  color:#fff;
-  font-size:1rem;
-  border:none;
-  border-radius:999px;
-  cursor:pointer;
-}
-
-.manual-box{
-  margin-top:16px;
-  display:none;
-}
-
-.manual-box p{
-  font-size:0.85rem;
-  color:#555;
-  margin-bottom:8px;
-}
-
-.manual-btn{
-  width:100%;
-  padding:10px;
-  border-radius:999px;
-  border:1px solid var(--accent-olive);
-  background:#fff;
-  color:var(--accent-olive);
-  font-weight:500;
-  cursor:pointer;
-}
-
-.status-text{
-  margin-top:8px;
-  font-size:0.85rem;
-  color:#a00;
-  display:none;
-}
-
-@media(max-width:768px){
-  .checkout-section{flex-direction:column;}
-}
+.page-content{max-width:900px;margin:auto;padding:20px 16px 60px;}
+.checkout-section{display:flex;flex-wrap:wrap;gap:24px;}
+.checkout-form, .order-summary{background:#fff;border-radius:12px;padding:20px;box-shadow:0 3px 10px rgba(0,0,0,0.05);flex:1 1 400px;}
+.checkout-form h2, .order-summary h2{margin-bottom:16px;}
+.checkout-form label{display:block;margin:8px 0 4px;font-size:0.9rem;}
+.checkout-form input{width:100%;padding:10px;border-radius:8px;border:1px solid #ccc;margin-bottom:12px;font-size:0.9rem;}
+.order-item{display:flex;justify-content:space-between;margin-bottom:8px;}
+.order-total{margin-top:12px;font-weight:600;font-size:1rem;color:var(--accent-olive);border-top:1px solid #eee;padding-top:8px;}
+.paystack-btn{margin-top:20px;display:block;width:100%;padding:12px;background:var(--accent-olive);color:#fff;font-size:1rem;border:none;border-radius:999px;cursor:pointer;}
+.manual-box{margin-top:16px;display:none;}
+.manual-box p{font-size:0.85rem;color:#555;margin-bottom:8px;}
+.manual-btn{width:100%;padding:10px;border-radius:999px;border:1px solid var(--accent-olive);background:#fff;color:var(--accent-olive);font-weight:500;cursor:pointer;}
+.status-text{margin-top:8px;font-size:0.85rem;color:#a00;display:none;}
+@media(max-width:768px){.checkout-section{flex-direction:column;}}
 </style>
 </head>
 
@@ -187,7 +74,6 @@ header{
 
       <button class="paystack-btn" id="payBtn">Pay Now</button>
 
-      <!-- Manual confirmation -->
       <div class="manual-box" id="manualConfirmBox">
         <p>
           If you completed a bank transfer and were not redirected after
@@ -225,15 +111,10 @@ const statusText = document.getElementById("confirmStatus");
 
 /* ---------- CART DISPLAY ---------- */
 cartCount.textContent = cart.reduce((s,i)=>s+i.quantity,0);
-
 let total = 0;
 cart.forEach(i=>{
   total += i.price * i.quantity;
-  orderItems.innerHTML += `
-    <div class="order-item">
-      <span>${i.name} x${i.quantity}</span>
-      <span>₦${(i.price*i.quantity).toLocaleString()}</span>
-    </div>`;
+  orderItems.innerHTML += `<div class="order-item"><span>${i.name} x${i.quantity}</span><span>₦${(i.price*i.quantity).toLocaleString()}</span></div>`;
 });
 orderTotal.textContent = `Total: ₦${total.toLocaleString()}`;
 
@@ -243,6 +124,7 @@ orderTotal.textContent = `Total: ₦${total.toLocaleString()}`;
   if(!pending) return;
 
   try {
+    // Fetch the latest order info from backend using orderRef
     const res = await fetch(`${API_BASE}/api/orders/ref/${pending.orderRef}`);
     const order = await res.json();
 
@@ -250,9 +132,9 @@ orderTotal.textContent = `Total: ₦${total.toLocaleString()}`;
       localStorage.removeItem("pendingOrder");
       localStorage.removeItem("cart");
       window.location.href = `thank-you.html?order=${order.orderRef}`;
-    } else if(order.paymentReference){
-      // Try automatic verification
-      const verifyRes = await fetch(`${API_BASE}/api/paystack/verify/${order.paymentReference}`);
+    } else if(order.paystackReference){
+      // Attempt automatic verification
+      const verifyRes = await fetch(`${API_BASE}/api/paystack/verify/${order.paystackReference}`);
       const data = await verifyRes.json();
 
       if(data.success){
@@ -281,7 +163,7 @@ document.getElementById("payBtn").onclick = async ()=>{
   if(cart.length === 0) return alert("Cart is empty");
 
   try {
-    // 1️⃣ Create order
+    // Create order
     const resOrder = await fetch(`${API_BASE}/api/orders`, {
       method:"POST",
       headers:{"Content-Type":"application/json"},
@@ -289,9 +171,10 @@ document.getElementById("payBtn").onclick = async ()=>{
     });
     const dataOrder = await resOrder.json();
     if(!dataOrder.success) return alert("Order creation failed");
+
     const order = dataOrder.order;
 
-    // 2️⃣ Initialize Paystack
+    // Initialize Paystack
     const resInit = await fetch(`${API_BASE}/api/paystack/init`, {
       method:"POST",
       headers:{"Content-Type":"application/json"},
@@ -300,19 +183,16 @@ document.getElementById("payBtn").onclick = async ()=>{
     const initData = await resInit.json();
     if(!initData.status) return alert("Payment initialization failed");
 
-    const paystackRef = initData.data.reference;
+    // Save pending order (store only orderRef)
+    localStorage.setItem("pendingOrder", JSON.stringify({ orderRef: order.orderRef }));
 
-    // Save pending order locally
-    localStorage.setItem("pendingOrder", JSON.stringify({ orderRef: order.orderRef, paystackReference: paystackRef }));
-
-    // 3️⃣ Paystack iframe
     const handler = PaystackPop.setup({
       key:"pk_live_9ea850872c6c1053cbf1530b95c65bdf4535048d",
       email: emailVal,
       amount: order.totalAmount*100,
-      reference: paystackRef,
+      reference: initData.data.reference,
       metadata: { orderRef: order.orderRef },
-      callback: r => verifyPayment(r.reference),
+      callback: r => verifyPayment(order.orderRef),
       onClose: ()=>{ manualBox.style.display = "block"; }
     });
     handler.openIframe();
@@ -321,15 +201,15 @@ document.getElementById("payBtn").onclick = async ()=>{
 };
 
 /* ---------- VERIFY PAYMENT ---------- */
-async function verifyPayment(ref){
+async function verifyPayment(orderRef){
   try{
-    const res = await fetch(`${API_BASE}/api/paystack/verify/${ref}`);
-    const data = await res.json();
+    const res = await fetch(`${API_BASE}/api/orders/ref/${orderRef}`);
+    const order = await res.json();
 
-    if(data.success){
+    if(order.paymentStatus === "paid"){
       localStorage.removeItem("pendingOrder");
       localStorage.removeItem("cart");
-      window.location.href = `thank-you.html?order=${data.order.orderRef}`;
+      window.location.href = `thank-you.html?order=${order.orderRef}`;
     } else {
       manualBox.style.display = "block";
       statusText.textContent = "Payment not completed yet. Try manual confirmation.";
@@ -352,24 +232,7 @@ confirmBtn.onclick = async ()=>{
     return;
   }
 
-  const ref = pending.paystackReference;
-  try{
-    const res = await fetch(`${API_BASE}/api/paystack/verify/${ref}`);
-    const data = await res.json();
-
-    if(data.success){
-      localStorage.removeItem("pendingOrder");
-      localStorage.removeItem("cart");
-      window.location.href = `thank-you.html?order=${data.order.orderRef}`;
-    } else {
-      statusText.textContent = "Payment not completed yet. Try again later.";
-      statusText.style.display = "block";
-    }
-  } catch(err){
-    console.error(err);
-    statusText.textContent = "Could not confirm payment. Try again.";
-    statusText.style.display = "block";
-  }
+  verifyPayment(pending.orderRef);
 };
 </script>
 
