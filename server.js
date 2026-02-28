@@ -269,7 +269,7 @@ app.use("/api/hero", heroRouter);
 // CREATE ORDER
 app.post("/api/orders", async (req, res) => {
   try {
-    const { name, phone, email, items, orderRef } = req.body;
+    const { name, phone, email, items } = req.body;
 
     if (!name || !phone || !email || !items || items.length === 0) {
       return res.status(400).json({ error: "Invalid order data" });
@@ -278,18 +278,21 @@ app.post("/api/orders", async (req, res) => {
     let total = 0;
     items.forEach(i => (total += i.price * i.quantity));
 
-    // ✅ Use frontend-generated orderRef
+    // ✅ BACKEND GENERATED (SOURCE OF TRUTH)
+    const orderRef = `OKIZZ-${Date.now()}`;
+
     const order = await Order.create({
       name,
       phone,
       email,
       items,
       totalAmount: total,
-      orderRef,       // save reference in DB
+      orderRef,
       paymentStatus: "pending"
     });
 
     res.json({ success: true, order });
+
   } catch (error) {
     console.error("Create order error:", error.message);
     res.status(500).json({ error: "Failed to create order" });
