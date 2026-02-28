@@ -65,26 +65,34 @@ const Hero = mongoose.model("Hero", heroSchema);
 // Order
 const orderSchema = new mongoose.Schema(
   {
-    name: String,
-    phone: String,
-    email: String,
-    items: [
-      {
-        ticketId: { type: mongoose.Schema.Types.ObjectId, ref: "Ticket" },
-        name: String,
-        price: Number,
-        quantity: Number
-      }
-    ],
-    totalAmount: Number,
-    paymentReference: String,
+    name: { type: String, required: true },
+    phone: { type: String, required: true },
+    email: { type: String, required: true },
+    items: {
+      type: [
+        {
+          ticketId: { type: mongoose.Schema.Types.ObjectId, ref: "Ticket", required: true },
+          name: { type: String, required: true },
+          price: { type: Number, required: true },
+          quantity: { type: Number, required: true }
+        }
+      ],
+      validate: [arr => arr.length > 0, "Order must have at least one item"]
+    },
+    totalAmount: { type: Number, required: true },
+    paymentReference: { type: String, index: true },
     paymentStatus: { type: String, enum: ["pending","paid","failed"], default: "pending" },
-    orderRef: { type: String, unique: true }  
+    orderRef: { type: String, unique: true, required: true },
+    paymentMethod: { type: String, enum: ["paystack","bank"], default: "paystack" },
+    statusHistory: [
+      { status: String, updatedAt: { type: Date, default: Date.now }, note: String }
+    ]
   },
   { timestamps: true }
 );
 
 const Order = mongoose.model("Order", orderSchema);
+
 /* =====================
    TICKETS ROUTES
 ===================== */
