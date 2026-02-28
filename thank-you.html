@@ -194,67 +194,107 @@ h1,h2{
 <script>
 const API_BASE = "https://okizz.onrender.com";
 
-/* ===============================
-   GET ORDER REF
-================================ */
-const params = new URLSearchParams(window.location.search);
-const orderRef = params.get("order") || localStorage.getItem("pendingOrderRef");
+const params = new URLSearchParams(location.search);
+let orderRef = params.get("order");
 
+const badge = document.getElementById("notifyBadge");
+const warningBox = document.getElementById("warningBox");
+
+// 🔁 Recover pending order if page reloads
 if (!orderRef) {
-  document.body.innerHTML = `
-    <h1>Order Not Found</h1>
-    <p>Please return to the checkout page.</p>
-  `;
-  throw new Error("No order reference");
+  orderRef = localStorage.getItem("pendingAdminOrder");
 }
 
-/* ===============================
-   POLLING LOGIC
-================================ */
-let pollingStopped = false;
+if (!orderRef) {
+  alert("No order found");
+  location.href = "index.html";
+}
 
-async function checkPayment() {
-  if (pollingStopped) return;
+// Always mark as pending until WhatsApp is sent
+localStorage.setItem("pendingAdminOrder", orderRef);
+badge.style.display = "block";
 
+async function loadOrder(){
   try {
     const res = await fetch(`${API_BASE}/api/orders/ref/${orderRef}`);
     const order = await res.json();
 
     if (!order || !order._id) {
-      setTimeout(checkPayment, 5000);
+      alert("Order not found");
       return;
     }
 
-    if (order.paymentStatus === "paid") {
-      pollingStopped = true;
+    window.currentOrder = order;
 
-      localStorage.setItem("lastOrder", JSON.stringify(order));
-      localStorage.removeItem("pendingOrderRef");
-      localStorage.removeItem("cart");
+    // ✅ SHOW WARNING
+    warningBox.style.display = "block";
 
-      document.querySelector("p").textContent =
-        "Payment confirmed! Redirecting...";
+    document.getElementById("buyerInfo").innerHTML = `
+      <h2>Buyer Details</h2>
+      <p><strong>Name:</strong> ${order.name}</p>
+      <p><strong>Email:</strong> ${order.email}</p>
+      <p><strong>Phone:</strong> ${order.phone}</p>
+    `;
 
-      setTimeout(() => {
-        window.location.href = `thank-you.html?order=${order.orderRef}`;
-      }, 1200);
+    let tHTML = `<h2>Tickets</h2>`;
+    order.items.forEach(t=>{
+      tHTML += `
+        <div class="ticket">
+          <strong>${t.name}</strong>
+          <span>Qty: ${t.quantity}</span>
+          <div class="price">₦${(t.price * t.quantity).toLocaleString()}</div>
+        </div>`;
+    });
+    document.getElementById("ticketSummary").innerHTML = tHTML;
 
-      return;
-    }
-
-    // Still pending
-    setTimeout(checkPayment, 5000);
-
+    document.getElementById("orderInfo").innerHTML = `
+      <h2>Order Summary</h2>
+      <p><strong>Order ID:</strong> ${order.orderRef}</p>
+      <p class="price">Total: ₦${order.totalAmount.toLocaleString()}</p>
+    `;
   } catch (err) {
-    console.warn("Payment check failed, retrying...");
-    setTimeout(checkPayment, 5000);
+    console.error(err);
+    alert("Failed to load order");
   }
 }
 
-/* ===============================
-   START POLLING
-================================ */
-checkPayment();
+loadOrder();
+
+function sendToWhatsApp() {
+  const order = window.currentOrder;
+  if (!order) {
+    alert("Order not loaded yet");
+    return;
+  }
+
+  let msg = `OKIZZ TICKET ORDER%0A%0A`;
+  msg += `Name: ${order.name}%0A`;
+  msg += `Email: ${order.email}%0A`;
+  msg += `Phone: ${order.phone}%0A`;
+  msg += `Order ID: ${order.orderRef}%0A%0A`;
+
+  order.items.forEach(t => {
+    msg += `${t.name} | Qty: ${t.quantity} | ₦${(t.price * t.quantity).toLocaleString()}%0A`;
+  });
+
+  window.open(
+    `https://wa.me/2349122054068?text=${msg}`,
+    "_blank"
+  );
+
+  // ✅ Clear pending state
+  localStorage.removeItem("pendingAdminOrder");
+  badge.style.display = "none";
+  warningBox.style.display = "none";
+}
+
+// ⚠️ Exit warning
+window.addEventListener("beforeunload", e=>{
+  if (localStorage.getItem("pendingAdminOrder")) {
+    e.preventDefault();
+    e.returnValue = "";
+  }
+});
 </script>
 
 </body>
