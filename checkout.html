@@ -237,25 +237,38 @@ cart.forEach(i=>{
 });
 orderTotal.textContent = `Total: ₦${total.toLocaleString()}`;
 
-/* ---------- CHECK PENDING ORDER ON LOAD ---------- */
+/* ---------- PENDING ORDER CHECK ON LOAD ---------- */
 (async function(){
-  const ref = localStorage.getItem("pendingOrderRef");
-  if(!ref) return;
+  const pending = JSON.parse(localStorage.getItem("pendingOrder")) || null;
+  if(!pending) return;
 
   try {
-    const res = await fetch(`${API_BASE}/api/orders/ref/${ref}`);
+    const res = await fetch(`${API_BASE}/api/orders/ref/${pending.orderRef}`);
     const order = await res.json();
 
     if(order.paymentStatus === "paid"){
-      localStorage.removeItem("pendingOrderRef");
+      localStorage.removeItem("pendingOrder");
       localStorage.removeItem("cart");
       window.location.href = `thank-you.html?order=${order.orderRef}`;
+    } else if(order.paymentReference){
+      // Try automatic verification
+      const verifyRes = await fetch(`${API_BASE}/api/paystack/verify/${order.paymentReference}`);
+      const data = await verifyRes.json();
+
+      if(data.success){
+        localStorage.removeItem("pendingOrder");
+        localStorage.removeItem("cart");
+        window.location.href = `thank-you.html?order=${data.order.orderRef}`;
+      } else {
+        manualBox.style.display = "block";
+      }
     } else {
-      // Pending → show manual confirm
       manualBox.style.display = "block";
     }
-  } catch(err) {
+
+  } catch(err){
     console.error("Pending order check error:", err);
+    manualBox.style.display = "block";
   }
 })();
 
@@ -264,56 +277,47 @@ document.getElementById("payBtn").onclick = async ()=>{
   const nameVal = document.getElementById("name").value.trim();
   const phoneVal = document.getElementById("phone").value.trim();
   const emailVal = document.getElementById("email").value.trim();
-
   if(!nameVal || !phoneVal || !emailVal) return alert("Fill all fields");
   if(cart.length === 0) return alert("Cart is empty");
 
   try {
-    // 1️⃣ Create order on backend
+    // 1️⃣ Create order
     const resOrder = await fetch(`${API_BASE}/api/orders`, {
-      method: "POST",
-      headers: {"Content-Type":"application/json"},
-      body: JSON.stringify({name: nameVal, phone: phoneVal, email: emailVal, items: cart})
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({name:nameVal, phone:phoneVal, email:emailVal, items:cart})
     });
     const dataOrder = await resOrder.json();
     if(!dataOrder.success) return alert("Order creation failed");
+    const order = dataOrder.order;
 
-    const { order } = dataOrder;
-    localStorage.setItem("pendingOrderRef", order.orderRef);
-
-    // 2️⃣ Initialize Paystack via backend
+    // 2️⃣ Initialize Paystack
     const resInit = await fetch(`${API_BASE}/api/paystack/init`, {
-      method: "POST",
-      headers: {"Content-Type":"application/json"},
-      body: JSON.stringify({ email: emailVal, amount: order.totalAmount, orderRef: order.orderRef })
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({ email: emailVal, amount: order.totalAmount, orderRef: order.orderRef })
     });
     const initData = await resInit.json();
     if(!initData.status) return alert("Payment initialization failed");
 
-    // 3️⃣ Open Paystack iframe
+    const paystackRef = initData.data.reference;
+
+    // Save pending order locally
+    localStorage.setItem("pendingOrder", JSON.stringify({ orderRef: order.orderRef, paystackReference: paystackRef }));
+
+    // 3️⃣ Paystack iframe
     const handler = PaystackPop.setup({
       key:"pk_live_9ea850872c6c1053cbf1530b95c65bdf4535048d",
       email: emailVal,
       amount: order.totalAmount*100,
-      reference: order.orderRef,
+      reference: paystackRef,
       metadata: { orderRef: order.orderRef },
       callback: r => verifyPayment(r.reference),
-      onClose: ()=> {
-        // Show manual confirm if user closes iframe
-        manualBox.style.display = "block";
-      }
+      onClose: ()=>{ manualBox.style.display = "block"; }
     });
     handler.openIframe();
 
-    // 4️⃣ Show manual confirm after 10s anyway
-    setTimeout(()=>{
-      manualBox.style.display = "block";
-    },10000);
-
-  } catch(err){
-    console.error("Checkout error:", err);
-    alert("Something went wrong. Try again.");
-  }
+  } catch(err){ console.error(err); alert("Checkout error"); }
 };
 
 /* ---------- VERIFY PAYMENT ---------- */
@@ -323,36 +327,38 @@ async function verifyPayment(ref){
     const data = await res.json();
 
     if(data.success){
-      localStorage.removeItem("pendingOrderRef");
+      localStorage.removeItem("pendingOrder");
       localStorage.removeItem("cart");
       window.location.href = `thank-you.html?order=${data.order.orderRef}`;
     } else {
-      alert("Payment not successful yet. Use manual confirmation if needed.");
       manualBox.style.display = "block";
+      statusText.textContent = "Payment not completed yet. Try manual confirmation.";
+      statusText.style.display = "block";
     }
   } catch(err){
-    console.error("Verify error:", err);
-    alert("Verification failed. Use manual confirmation.");
+    console.error(err);
     manualBox.style.display = "block";
+    statusText.textContent = "Verification failed. Use manual confirmation.";
+    statusText.style.display = "block";
   }
 }
 
 /* ---------- MANUAL CONFIRM ---------- */
 confirmBtn.onclick = async ()=>{
-  const ref = localStorage.getItem("pendingOrderRef");
-
-  if(!ref){
+  const pending = JSON.parse(localStorage.getItem("pendingOrder")) || null;
+  if(!pending){
     statusText.textContent = "No transaction detected.";
     statusText.style.display = "block";
     return;
   }
 
+  const ref = pending.paystackReference;
   try{
     const res = await fetch(`${API_BASE}/api/paystack/verify/${ref}`);
     const data = await res.json();
 
     if(data.success){
-      localStorage.removeItem("pendingOrderRef");
+      localStorage.removeItem("pendingOrder");
       localStorage.removeItem("cart");
       window.location.href = `thank-you.html?order=${data.order.orderRef}`;
     } else {
@@ -360,11 +366,12 @@ confirmBtn.onclick = async ()=>{
       statusText.style.display = "block";
     }
   } catch(err){
-    console.error("Manual confirm error:", err);
+    console.error(err);
     statusText.textContent = "Could not confirm payment. Try again.";
     statusText.style.display = "block";
   }
 };
 </script>
+
 </body>
 </html>
