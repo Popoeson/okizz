@@ -172,12 +172,15 @@ header{
 const API_BASE = "https://okizz.onrender.com";
 let cart = JSON.parse(localStorage.getItem("cart")) || [];
 
+// 1️⃣ Check pending payment on page load
 (async function checkPendingPayment(){
   const pendingRef = localStorage.getItem("pendingOrderRef");
   if(!pendingRef) return;
 
   try {
     const res = await fetch(`${API_BASE}/api/orders/ref/${pendingRef}`);
+    if(!res.ok) throw new Error("Order not found");
+
     const order = await res.json();
 
     if(order.paymentStatus === "paid"){
@@ -186,10 +189,11 @@ let cart = JSON.parse(localStorage.getItem("cart")) || [];
       window.location.href = `thank-you.html?order=${order.orderRef}`;
     }
   } catch(e){
-    console.warn("Pending check failed");
+    console.warn("Pending payment check failed", e);
   }
 })();
 
+// 2️⃣ DOM elements
 const cartCount  = document.getElementById("cartCount");
 const orderItems = document.getElementById("orderItems");
 const orderTotal = document.getElementById("orderTotal");
@@ -221,7 +225,7 @@ function renderOrder(){
 updateCartCount();
 renderOrder();
 
-// Pay button click
+// 3️⃣ Pay button
 document.getElementById("payBtn").addEventListener("click", async () => {
   const name  = document.getElementById("name").value.trim();
   const phone = document.getElementById("phone").value.trim();
@@ -238,15 +242,11 @@ document.getElementById("payBtn").addEventListener("click", async () => {
   }
 
   try {
-    // Generate unique order reference
-    const orderRef = `OKIZZ-${Date.now()}`;
-    localStorage.setItem("pendingOrderRef", orderRef); // save for pending page
-
-    // 1️⃣ Create order in backend
+    // 3a️⃣ Create order in backend (backend generates orderRef)
     const orderRes = await fetch(`${API_BASE}/api/orders`, {
       method: "POST",
       headers: { "Content-Type":"application/json" },
-      body: JSON.stringify({ name, phone, email, items: cart, orderRef })
+      body: JSON.stringify({ name, phone, email, items: cart })
     });
 
     const orderData = await orderRes.json();
@@ -257,25 +257,27 @@ document.getElementById("payBtn").addEventListener("click", async () => {
 
     const order = orderData.order;
 
-    // 2️⃣ Initialize Paystack
+    // 3b️⃣ Save pending orderRef for reload handling
+    localStorage.setItem("pendingOrderRef", order.orderRef);
+
+    // 3c️⃣ Initialize Paystack
     const handler = PaystackPop.setup({
       key: "pk_live_9ea850872c6c1053cbf1530b95c65bdf4535048d",
       email,
       amount: order.totalAmount * 100,
       currency: "NGN",
-      metadata: { orderRef }, // pass orderRef directly
+      metadata: { orderRef: order.orderRef },
       callback: function(response){
-        // Payment successful (card)
+        // Payment successful
         verifyPayment(response.reference);
       },
       onClose: function(){
         // Popup closed before payment
         alert("Payment window closed. You can complete payment on your bank/USSD app.");
-        window.location.href = `pending-payment.html?order=${orderRef}`;
+        window.location.href = `pending-payment.html?order=${order.orderRef}`;
       }
     });
 
-    // Show popup
     handler.openIframe();
 
   } catch (err) {
@@ -284,7 +286,7 @@ document.getElementById("payBtn").addEventListener("click", async () => {
   }
 });
 
-// Verify payment via backend
+// 4️⃣ Verify payment via backend
 async function verifyPayment(reference){
   try {
     const res = await fetch(`${API_BASE}/api/paystack/verify/${reference}`);
@@ -302,7 +304,6 @@ async function verifyPayment(reference){
     localStorage.removeItem("pendingOrderRef");
     localStorage.removeItem("cart");
 
-    // Redirect to thank-you
     window.location.href = `thank-you.html?order=${data.order.orderRef}`;
 
   } catch(err){
