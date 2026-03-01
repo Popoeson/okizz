@@ -15,7 +15,13 @@ const app = express();
    MIDDLEWARE
 ===================== */
 app.use(cors());
-app.use(express.json());
+app.use((req, res, next) => {
+  if (req.originalUrl === "/api/paystack/webhook") {
+    next(); // skip json parser
+  } else {
+    express.json()(req, res, next);
+  }
+});
 app.use(express.urlencoded({ extended: true }));
 
 /* =====================
@@ -375,43 +381,57 @@ app.get("/api/paystack/verify/:reference", async (req, res) => {
 });
 
 /* -------- PAYSTACK WEBHOOK -------- */
-app.post(
+ app.post(
   "/api/paystack/webhook",
-  bodyParser.raw({ type: "*/*" }), // get raw body for HMAC
+  bodyParser.raw({ type: "application/json" }),
   async (req, res) => {
     try {
       const secret = process.env.PAYSTACK_SECRET_KEY;
+
+      const signature = req.headers["x-paystack-signature"];
+
       const hash = crypto
         .createHmac("sha512", secret)
-        .update(req.body) // raw buffer
+        .update(req.body)
         .digest("hex");
 
-      if (hash !== req.headers["x-paystack-signature"]) {
-        return res.status(401).send("Invalid signature");
+      if (hash !== signature) {
+        console.log("Invalid webhook signature");
+        return res.sendStatus(401);
       }
 
-      // Parse JSON after HMAC verification
       const event = JSON.parse(req.body.toString());
-      const { event: eventType, data } = event;
 
-      // Only handle successful charges
-      if (eventType === "charge.success") {
+      if (event.event === "charge.success") {
+        const data = event.data;
         const orderRef = data.metadata?.orderRef;
-        if (!orderRef) return res.status(400).send("No orderRef found");
 
-        // Update order in DB
-        const order = await Order.findOneAndUpdate(
-          { orderRef },
-          { paymentStatus: "paid", paystackReference: data.reference },
-          { new: true }
-        );
+        if (!orderRef) {
+          console.log("Webhook missing orderRef");
+          return res.sendStatus(400);
+        }
 
-        if (!order) return res.status(404).send("Order not found");
+        const order = await Order.findOne({ orderRef });
 
-        console.log("Order updated via webhook:", orderRef);
+        if (!order) {
+          console.log("Order not found for webhook:", orderRef);
+          return res.sendStatus(404);
+        }
+
+        if (order.paymentStatus !== "paid") {
+          order.paymentStatus = "paid";
+          order.paymentReference = data.reference;
+          order.statusHistory.push({
+            status: "paid",
+            note: "Confirmed via Paystack webhook"
+          });
+          await order.save();
+
+          console.log("✅ Order marked PAID:", orderRef);
+        }
       }
 
-      res.sendStatus(200); // Must respond 200 to acknowledge webhook
+      res.sendStatus(200);
     } catch (err) {
       console.error("Webhook error:", err);
       res.sendStatus(500);
