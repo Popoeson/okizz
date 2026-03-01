@@ -732,10 +732,10 @@ document.getElementById('nextBtn').addEventListener('click', () => {
 fetchFeaturedArtistes();
 
 // ===============================
-// CAROUSEL HELPERS
+// CAROUSEL HELPERS (FIXED)
 // ===============================
 
-function activateCard(index, smooth = true){
+function activateCard(index, smooth = true) {
   const track = document.getElementById('featuredTrack');
   const cards = [...track.children];
   if (!cards[index]) return;
@@ -743,30 +743,41 @@ function activateCard(index, smooth = true){
   cards.forEach(c => c.classList.remove('active'));
   cards[index].classList.add('active');
 
-  cards[index].scrollIntoView({
-    behavior: smooth ? "smooth" : "auto",
-    inline: "center",
-    block: "nearest"
+  // Horizontal centering WITHOUT vertical scroll
+  const card = cards[index];
+  const offset =
+    card.offsetLeft -
+    (track.clientWidth / 2 - card.clientWidth / 2);
+
+  track.scrollTo({
+    left: offset,
+    behavior: smooth ? "smooth" : "auto"
   });
 
   currentIndex = index;
 }
 
-function startAutoplay(){
+function startAutoplay() {
   stopAutoplay();
   autoScrollInterval = setInterval(() => {
     if (isUserInteracting) return;
-    activateCard((currentIndex + 1) % document.getElementById('featuredTrack').children.length);
+    const track = document.getElementById('featuredTrack');
+    const cards = track.children;
+    activateCard((currentIndex + 1) % cards.length);
   }, 3500);
 }
 
-function stopAutoplay(){
-  if (autoScrollInterval) clearInterval(autoScrollInterval);
+function stopAutoplay() {
+  if (autoScrollInterval) {
+    clearInterval(autoScrollInterval);
+    autoScrollInterval = null;
+  }
 }
 
-function enableTouchScroll(){
+function enableTouchScroll() {
   const track = document.getElementById('featuredTrack');
-  let startX, scrollStart;
+  let startX = 0;
+  let scrollStart = 0;
 
   track.addEventListener('pointerdown', e => {
     isUserInteracting = true;
@@ -783,32 +794,29 @@ function enableTouchScroll(){
 
   track.addEventListener('pointerup', () => {
     isUserInteracting = false;
-    startAutoplay();
     snapToClosestCard();
+    startAutoplay();
   });
 }
 
-function snapToClosestCard(){
+function snapToClosestCard() {
   const track = document.getElementById('featuredTrack');
   const cards = [...track.children];
-  const center = track.scrollLeft + track.offsetWidth / 2;
+  const trackCenter = track.scrollLeft + track.clientWidth / 2;
 
-  let closest = 0;
-  let min = Infinity;
+  let closestIndex = 0;
+  let minDistance = Infinity;
 
-  cards.forEach((c, i) => {
-    const rect = c.getBoundingClientRect();
-    const cardCenter = rect.left + rect.width / 2;
-    const trackCenter = track.getBoundingClientRect().left + track.offsetWidth / 2;
-    const dist = Math.abs(trackCenter - cardCenter);
-
-    if (dist < min) {
-      min = dist;
-      closest = i;
+  cards.forEach((card, i) => {
+    const cardCenter = card.offsetLeft + card.clientWidth / 2;
+    const distance = Math.abs(trackCenter - cardCenter);
+    if (distance < minDistance) {
+      minDistance = distance;
+      closestIndex = i;
     }
   });
 
-  activateCard(closest);
+  activateCard(closestIndex);
 }
 
 // ===============================
