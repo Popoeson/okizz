@@ -96,7 +96,6 @@ header{position:fixed;top:0;width:100%;background:rgba(255,255,255,0.96);z-index
 </div>
 
 <script src="https://js.paystack.co/v1/inline.js"></script>
-
 <script>
 const API_BASE = "https://okizz.onrender.com";
 let cart = JSON.parse(localStorage.getItem("cart")) || [];
@@ -120,7 +119,7 @@ cart.forEach(i=>{
 });
 orderTotal.textContent = `Total: ₦${total.toLocaleString()}`;
 
-/* ---------- PENDING ORDER CHECK ---------- */
+/* ---------- AUTO CHECK PENDING ORDER ---------- */
 (async function(){
   const pending = JSON.parse(localStorage.getItem("pendingOrder")) || null;
   if(!pending) return;
@@ -142,7 +141,7 @@ orderTotal.textContent = `Total: ₦${total.toLocaleString()}`;
   }
 })();
 
-/* ---------- PAYSTACK CHECKOUT ---------- */
+/* ---------- CREATE ORDER & PAYSTACK ---------- */
 document.getElementById("payBtn").onclick = async () => {
   const nameVal = document.getElementById("name").value.trim();
   const phoneVal = document.getElementById("phone").value.trim();
@@ -153,14 +152,14 @@ document.getElementById("payBtn").onclick = async () => {
 
   try {
     // Prepare cart items for backend
-const itemsToSend = cart.map(i => ({
-  _id: i._id,  // <-- backend requires this
-  name: i.name,
-  price: i.price,
-  quantity: i.quantity
-}));
+    const itemsToSend = cart.map(i => ({
+      _id: i._id,  
+      name: i.name,
+      price: i.price,
+      quantity: i.quantity
+    }));
 
-    // 1️⃣ Create order in backend
+    // 1️⃣ Create order
     const resOrder = await fetch(`${API_BASE}/api/orders`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -186,14 +185,14 @@ const itemsToSend = cart.map(i => ({
     const initData = await resInit.json();
     if (!initData.status) return alert("Payment initialization failed");
 
-    // 3️⃣ Save pending order (just store orderRef)
+    // 3️⃣ Save pending order locally
     localStorage.setItem("pendingOrder", JSON.stringify({ orderRef: order.orderRef }));
 
     // 4️⃣ Launch Paystack
     const handler = PaystackPop.setup({
       key: "pk_live_9ea850872c6c1053cbf1530b95c65bdf4535048d",
       email: emailVal,
-      amount: order.totalAmount * 100, // kobo
+      amount: order.totalAmount * 100,
       reference: initData.data.reference,
       metadata: { orderRef: order.orderRef },
       callback: () => verifyPayment(order.orderRef),
@@ -207,7 +206,7 @@ const itemsToSend = cart.map(i => ({
   }
 };
 
-/* ---------- VERIFY PAYMENT ---------- */
+/* ---------- VERIFY PAYMENT (DB) ---------- */
 async function verifyPayment(orderRef){
   try {
     const res = await fetch(`${API_BASE}/api/orders/ref/${orderRef}`);
@@ -230,17 +229,42 @@ async function verifyPayment(orderRef){
   }
 }
 
-/* ---------- MANUAL CONFIRM ---------- */
+/* ---------- MANUAL CONFIRM USING EMAIL (DB) ---------- */
 confirmBtn.onclick = async () => {
-  const pending = JSON.parse(localStorage.getItem("pendingOrder")) || null;
-  if(!pending){
-    statusText.textContent = "No transaction detected.";
+  const emailVal = document.getElementById("email").value.trim();
+  if(!emailVal) {
+    statusText.textContent = "Enter your email to confirm payment.";
     statusText.style.display = "block";
     return;
   }
-  verifyPayment(pending.orderRef);
+
+  try {
+    // Fetch latest pending order from backend by email
+    const res = await fetch(`${API_BASE}//api/orders/latest/${emailVal}`);
+    if (!res.ok) throw new Error("No pending orders found");
+    const order = await res.json();
+
+    if (!order) {
+      statusText.textContent = "No pending order found for this email.";
+      statusText.style.display = "block";
+      return;
+    }
+
+    // Check payment status from DB
+    if(order.paymentStatus === "paid") {
+      localStorage.removeItem("pendingOrder");
+      localStorage.removeItem("cart");
+      window.location.href = `thank-you.html?order=${order.orderRef}`;
+    } else {
+      statusText.textContent = "Payment not completed yet. Try again later.";
+      statusText.style.display = "block";
+    }
+  } catch(err) {
+    console.error("Manual confirmation error:", err);
+    statusText.textContent = "Error checking order. Try again.";
+    statusText.style.display = "block";
+  }
 };
 </script>
-
 </body>
 </html>
