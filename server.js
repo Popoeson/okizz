@@ -443,21 +443,16 @@ app.get("/api/paystack/verify/:reference", async (req, res) => {
 app.get("/api/orders/ref/:orderRef", async (req, res) => {
   try {
     const order = await Order.findOne({ orderRef: req.params.orderRef });
-    if (!order) return res.status(404).json({ error: "Order not found" });
+    if (!order) {
+      return res.status(404).json({ error: "Order not found" });
+    }
 
-    res.json({
-      orderRef: order.orderRef,
-      paymentStatus: order.paymentStatus,
-      paystackReference: order.paymentReference,
-      totalAmount: order.totalAmount,
-      items: order.items,
-    });
+    res.json(order); // ✅ return FULL document
   } catch (err) {
     console.error("Fetch order error:", err.message);
     res.status(500).json({ error: "Failed to fetch order" });
   }
 });
-
 
 // GET /api/orders/pending/:email
 app.get("/api/orders/pending/:email", async (req, res) => {
