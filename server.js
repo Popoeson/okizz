@@ -440,6 +440,20 @@ app.get("/api/orders/ref/:orderRef", async (req, res) => {
   }
 });
 
+
+// GET /api/orders/pending/:email
+app.get("/api/orders/pending/:email", async (req, res) => {
+  try {
+    const { email } = req.params;
+    const order = await Order.findOne({ email, paymentStatus: "pending" }).sort({ createdAt: -1 });
+    if (!order) return res.status(404).json(null);
+    res.json(order);
+  } catch(err) {
+    console.error("Fetch pending order error:", err);
+    res.status(500).json({ error: "Failed to fetch pending order" });
+  }
+});
+
 // GET ALL ORDERS (ADMIN)
 app.get("/api/orders", async (req, res) => {
   try {
