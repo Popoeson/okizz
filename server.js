@@ -319,31 +319,58 @@ app.post("/api/orders", async (req, res) => {
     res.status(500).json({ error: "Failed to create order" });
   }
 });
-/* -------- INITIALIZE PAYSTACK -------- */
+
+/* -------- INITIALIZE PAYSTACK (WITH SPLIT GROUP) -------- */
 app.post("/api/paystack/init", async (req, res) => {
   try {
     const { email, amount, orderRef } = req.body;
-    if (!email || !amount || !orderRef)
-      return res.status(400).json({ error: "Invalid payment data" });
 
+    if (!email || !amount || !orderRef) {
+      return res.status(400).json({ error: "Invalid payment data" });
+    }
+
+    // 1️⃣ Confirm order exists
+    const order = await Order.findOne({ orderRef });
+    if (!order) {
+      return res.status(404).json({ error: "Order not found" });
+    }
+
+    // 2️⃣ Initialize Paystack with SPLIT CODE
     const response = await axios.post(
       "https://api.paystack.co/transaction/initialize",
-      { email, amount: amount * 100, metadata: { orderRef } },
-      { headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` } }
+      {
+        email,
+        amount: amount * 100, // Paystack expects kobo
+        split_code: process.env.PAYSTACK_SPLIT_CODE,
+        metadata: {
+          orderRef,
+          customer_name: order.name,
+          customer_phone: order.phone
+        }
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+          "Content-Type": "application/json"
+        }
+      }
     );
 
     const paystackRef = response.data.data.reference;
 
-    // Store Paystack reference in the order
-    await Order.findOneAndUpdate(
-      { orderRef },
-      { paymentReference: paystackRef },
-      { new: true }
-    );
+    // 3️⃣ Save Paystack reference on order
+    order.paymentReference = paystackRef;
+    await order.save();
 
-    res.json(response.data);
+    // 4️⃣ Send Paystack response to frontend
+    res.json({
+      status: true,
+      message: "Payment initialized",
+      data: response.data.data
+    });
+
   } catch (err) {
-    console.error("Paystack init error:", err.message);
+    console.error("Paystack init error:", err.response?.data || err.message);
     res.status(500).json({ error: "Payment initialization failed" });
   }
 });
