@@ -320,7 +320,7 @@ app.post("/api/orders", async (req, res) => {
   }
 });
 
-/* -------- INITIALIZE PAYSTACK (WITH SPLIT GROUP) -------- */
+/* -------- INITIALIZE PAYSTACK (WITH SPLIT GROUP & REDIRECT) -------- */
 app.post("/api/paystack/init", async (req, res) => {
   try {
     const { email, amount, orderRef } = req.body;
@@ -335,13 +335,14 @@ app.post("/api/paystack/init", async (req, res) => {
       return res.status(404).json({ error: "Order not found" });
     }
 
-    // 2️⃣ Initialize Paystack with SPLIT CODE
+    // 2️⃣ Initialize Paystack with SPLIT CODE + CALLBACK URL
     const response = await axios.post(
       "https://api.paystack.co/transaction/initialize",
       {
         email,
-        amount: amount * 100, // Paystack expects kobo
+        amount: amount * 100, // amount in kobo
         split_code: process.env.PAYSTACK_SPLIT_CODE,
+        callback_url: "https://okizz.vercel.app/checkout.html", // <-- redirect back here
         metadata: {
           orderRef,
           customer_name: order.name,
@@ -362,11 +363,14 @@ app.post("/api/paystack/init", async (req, res) => {
     order.paymentReference = paystackRef;
     await order.save();
 
-    // 4️⃣ Send Paystack response to frontend
+    // 4️⃣ Send Paystack authorization URL to frontend
     res.json({
       status: true,
       message: "Payment initialized",
-      data: response.data.data
+      data: {
+        authorization_url: response.data.data.authorization_url,
+        reference: paystackRef
+      }
     });
 
   } catch (err) {
