@@ -109,13 +109,17 @@ const confirmBtn = document.getElementById("confirmPaymentBtn");
 const statusText = document.getElementById("confirmStatus");
 
 /* ---------- DISPLAY CART ---------- */
-cartCount.textContent = cart.reduce((s,i)=>s+i.quantity,0);
+cartCount.textContent = cart.reduce((s, i) => s + i.quantity, 0);
 let total = 0;
 orderItems.innerHTML = "";
-cart.forEach(i=>{
+cart.forEach(i => {
   const itemTotal = i.price * i.quantity;
   total += itemTotal;
-  orderItems.innerHTML += `<div class="order-item"><span>${i.name} x${i.quantity}</span><span>₦${itemTotal.toLocaleString()}</span></div>`;
+  orderItems.innerHTML += `
+    <div class="order-item">
+      <span>${i.name} x${i.quantity}</span>
+      <span>₦${itemTotal.toLocaleString()}</span>
+    </div>`;
 });
 orderTotal.textContent = `Total: ₦${total.toLocaleString()}`;
 
@@ -141,7 +145,7 @@ orderTotal.textContent = `Total: ₦${total.toLocaleString()}`;
   }
 })();
 
-/* ---------- CREATE ORDER & PAYSTACK ---------- */
+/* ---------- CREATE ORDER & REDIRECT TO PAYSTACK ---------- */
 document.getElementById("payBtn").onclick = async () => {
   const nameVal = document.getElementById("name").value.trim();
   const phoneVal = document.getElementById("phone").value.trim();
@@ -153,7 +157,7 @@ document.getElementById("payBtn").onclick = async () => {
   try {
     // Prepare cart items for backend
     const itemsToSend = cart.map(i => ({
-      _id: i._id,  
+      _id: i._id,
       name: i.name,
       price: i.price,
       quantity: i.quantity
@@ -176,28 +180,31 @@ document.getElementById("payBtn").onclick = async () => {
 
     const order = dataOrder.order;
 
-    // 2️⃣ Initialize Paystack
-const resInit = await fetch(`${API_BASE}/api/paystack/init`, {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    email: emailVal,
-    amount: order.totalAmount,
-    orderRef: order.orderRef
-  })
-});
+    // 2️⃣ Initialize Paystack with split
+    const resInit = await fetch(`${API_BASE}/api/paystack/init`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: emailVal,
+        amount: order.totalAmount,
+        orderRef: order.orderRef
+      })
+    });
 
-const initData = await resInit.json();
-if (!initData.status) return alert("Payment initialization failed");
+    const initData = await resInit.json();
+    if (!initData.status) return alert("Payment initialization failed");
 
-// 3️⃣ Save pending order
-localStorage.setItem(
-  "pendingOrder",
-  JSON.stringify({ orderRef: order.orderRef })
-);
+    // 3️⃣ Save pending order
+    localStorage.setItem("pendingOrder", JSON.stringify({ orderRef: order.orderRef }));
 
-// 4️⃣ Redirect to Paystack (IMPORTANT)
-window.location.href = initData.data.authorization_url;
+    // 4️⃣ Redirect to Paystack-hosted checkout page
+    window.location.href = initData.data.authorization_url;
+
+  } catch(err){
+    console.error("Checkout error:", err);
+    alert("Checkout error. Try again.");
+  }
+};
 
 /* ---------- VERIFY PAYMENT (DB) ---------- */
 async function verifyPayment(orderRef){
@@ -215,7 +222,7 @@ async function verifyPayment(orderRef){
       statusText.style.display = "block";
     }
   } catch(err){
-    console.error(err);
+    console.error("Verification error:", err);
     manualBox.style.display = "block";
     statusText.textContent = "Verification failed. Use manual confirmation.";
     statusText.style.display = "block";
@@ -225,26 +232,24 @@ async function verifyPayment(orderRef){
 /* ---------- MANUAL CONFIRM USING EMAIL (DB) ---------- */
 confirmBtn.onclick = async () => {
   const emailVal = document.getElementById("email").value.trim();
-  if(!emailVal) {
+  if(!emailVal){
     statusText.textContent = "Enter your email to confirm payment.";
     statusText.style.display = "block";
     return;
   }
 
   try {
-    // Fetch latest pending order from backend by email
-    const res = await fetch(`${API_BASE}//api/orders/latest/${emailVal}`);
+    const res = await fetch(`${API_BASE}/api/orders/latest/${emailVal}`);
     if (!res.ok) throw new Error("No pending orders found");
     const order = await res.json();
 
-    if (!order) {
+    if (!order){
       statusText.textContent = "No pending order found for this email.";
       statusText.style.display = "block";
       return;
     }
 
-    // Check payment status from DB
-    if(order.paymentStatus === "paid") {
+    if(order.paymentStatus === "paid"){
       localStorage.removeItem("pendingOrder");
       localStorage.removeItem("cart");
       window.location.href = `thank-you.html?order=${order.orderRef}`;
@@ -252,7 +257,7 @@ confirmBtn.onclick = async () => {
       statusText.textContent = "Payment not completed yet. Try again later.";
       statusText.style.display = "block";
     }
-  } catch(err) {
+  } catch(err){
     console.error("Manual confirmation error:", err);
     statusText.textContent = "Error checking order. Try again.";
     statusText.style.display = "block";
