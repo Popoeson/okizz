@@ -177,34 +177,27 @@ document.getElementById("payBtn").onclick = async () => {
     const order = dataOrder.order;
 
     // 2️⃣ Initialize Paystack
-    const resInit = await fetch(`${API_BASE}/api/paystack/init`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: emailVal, amount: order.totalAmount, orderRef: order.orderRef })
-    });
-    const initData = await resInit.json();
-    if (!initData.status) return alert("Payment initialization failed");
+const resInit = await fetch(`${API_BASE}/api/paystack/init`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    email: emailVal,
+    amount: order.totalAmount,
+    orderRef: order.orderRef
+  })
+});
 
-    // 3️⃣ Save pending order locally
-    localStorage.setItem("pendingOrder", JSON.stringify({ orderRef: order.orderRef }));
+const initData = await resInit.json();
+if (!initData.status) return alert("Payment initialization failed");
 
-    // 4️⃣ Launch Paystack
-    const handler = PaystackPop.setup({
-      key: "pk_live_9ea850872c6c1053cbf1530b95c65bdf4535048d",
-      email: emailVal,
-      amount: order.totalAmount * 100,
-      reference: initData.data.reference,
-      metadata: { orderRef: order.orderRef },
-      callback: () => verifyPayment(order.orderRef),
-      onClose: () => { manualBox.style.display = "block"; }
-    });
-    handler.openIframe();
+// 3️⃣ Save pending order
+localStorage.setItem(
+  "pendingOrder",
+  JSON.stringify({ orderRef: order.orderRef })
+);
 
-  } catch(err){
-    console.error(err);
-    alert("Checkout error");
-  }
-};
+// 4️⃣ Redirect to Paystack (IMPORTANT)
+window.location.href = initData.data.authorization_url;
 
 /* ---------- VERIFY PAYMENT (DB) ---------- */
 async function verifyPayment(orderRef){
