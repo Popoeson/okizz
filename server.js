@@ -522,6 +522,12 @@ app.get("/api/orders/:id", async (req, res) => {
   }
 });*/
 
+// HEALTH CHECK
+
+app.get("/api/health", (req, res) => {
+  res.json({ status: "ok" });
+});
+
 /* =====================
    SERVER
 ===================== */
