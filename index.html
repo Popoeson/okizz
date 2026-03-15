@@ -397,17 +397,13 @@ header{
 const API_BASE = 'https://okizz.onrender.com';
 
 
-/* ===============================
-   PAGE LOADER CONTROL (WAIT FOR SERVER)
-=============================== */
-
+// ===============================
+// PAGE LOADER CONTROL
+// ===============================
 document.body.classList.add("loading");
-
-// const API_BASE = "https://okizz.onrender.com";
 
 async function wakeServer(){
   try{
-    // lightweight ping to wake Render
     await fetch(`${API_BASE}/api/health`);
   }catch(err){
     console.warn("Server wake attempt failed:", err);
@@ -417,63 +413,66 @@ async function wakeServer(){
 window.addEventListener("load", async () => {
   const loader = document.getElementById("pageLoader");
 
-  // Wake server first
   await wakeServer();
 
-  // Smooth UX delay
   setTimeout(() => {
     loader.classList.add("hidden");
     document.body.classList.remove("loading");
   }, 400);
 });
 
+
 // ===============================
-// NOTIFICATION BADGE LOGIC
+// NOTIFICATION BADGE
 // ===============================
 const headerTop = document.querySelector('.header-top');
+
 if(headerTop){
   const notifyBtn = document.createElement('div');
   notifyBtn.id = 'notifyBtn';
   notifyBtn.style.position = 'relative';
   notifyBtn.style.cursor = 'pointer';
   notifyBtn.style.marginLeft = '16px';
-  notifyBtn.innerHTML = `<i class="fa-solid fa-bell"></i>
-                         <span id="notifyBadge" style="
-                           display:none;
-                           position:absolute;
-                           top:-6px;
-                           right:-6px;
-                           background:red;
-                           color:#fff;
-                           font-size:10px;
-                           padding:2px 6px;
-                           border-radius:50%;
-                         ">!</span>`;
+
+  notifyBtn.innerHTML = `
+    <i class="fa-solid fa-bell"></i>
+    <span id="notifyBadge" style="
+      display:none;
+      position:absolute;
+      top:-6px;
+      right:-6px;
+      background:red;
+      color:#fff;
+      font-size:10px;
+      padding:2px 6px;
+      border-radius:50%;
+    ">!</span>
+  `;
+
   headerTop.appendChild(notifyBtn);
 
-  // Show badge if pending admin order exists
   const badge = document.getElementById("notifyBadge");
+
   if(localStorage.getItem("pendingAdminOrder")){
     badge.style.display = "block";
   }
 
-  // Redirect to thank-you page on click
   notifyBtn.addEventListener('click', ()=>{
     const orderId = localStorage.getItem("pendingAdminOrder");
-    if(orderId) window.location.href = `thank-you.html?order=${orderId}`;
+    if(orderId){
+      window.location.href = `thank-you.html?order=${orderId}`;
+    }
   });
 }
 
+
 // ===============================
-// STATE
+// CART STATE
 // ===============================
 let cart = JSON.parse(localStorage.getItem('cart')) || [];
 
-// ===============================
-// HELPERS
-// ===============================
 function updateCartCount(){
-  const count = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const count = cart.reduce((sum,item)=>sum+item.quantity,0);
   document.getElementById('cartCount').textContent = count;
 }
 
@@ -481,16 +480,18 @@ function saveCart(){
   localStorage.setItem('cart', JSON.stringify(cart));
 }
 
+
 // ===============================
 // CART LOGIC
 // ===============================
 function addToCart(ticket){
+
   const existing = cart.find(i => i._id === ticket._id);
 
-  if (existing) {
+  if(existing){
     existing.quantity++;
-  } else {
-    cart.push({ ...ticket, quantity: 1 });
+  }else{
+    cart.push({...ticket, quantity:1});
   }
 
   saveCart();
@@ -499,11 +500,13 @@ function addToCart(ticket){
 }
 
 function changeQty(id, delta){
-  const item = cart.find(i => i._id === id);
-  if (!item) return;
+
+  const item = cart.find(i=>i._id === id);
+  if(!item) return;
 
   item.quantity += delta;
-  if (item.quantity <= 0) {
+
+  if(item.quantity <= 0){
     cart = cart.filter(i => i._id !== id);
   }
 
@@ -513,27 +516,34 @@ function changeQty(id, delta){
 }
 
 function renderCart(){
+
   const cartItems = document.getElementById('cartItems');
   const cartTotal = document.getElementById('cartTotal');
 
-  cartItems.innerHTML = '';
+  cartItems.innerHTML = "";
+
   let total = 0;
 
   cart.forEach(item => {
+
     const itemTotal = item.price * item.quantity;
     total += itemTotal;
 
     cartItems.innerHTML += `
       <div class="cart-item">
-        <img src="${item.image}" alt="${item.name}">
+        <img src="${item.image}">
         <div class="cart-item-content">
           <strong>${item.name}</strong>
+
           <div class="qty-controls">
-            <button onclick="changeQty('${item._id}', -1)">−</button>
+            <button onclick="changeQty('${item._id}',-1)">−</button>
             <span>${item.quantity}</span>
-            <button onclick="changeQty('${item._id}', 1)">+</button>
+            <button onclick="changeQty('${item._id}',1)">+</button>
           </div>
-          <div class="item-price">₦${itemTotal.toLocaleString()}</div>
+
+          <div class="item-price">
+            ₦${itemTotal.toLocaleString()}
+          </div>
         </div>
       </div>
     `;
@@ -542,17 +552,21 @@ function renderCart(){
   cartTotal.textContent = `Total: ₦${total.toLocaleString()}`;
 }
 
+
 // ===============================
 // CART UI
 // ===============================
 function toggleCart(){
+
   document.getElementById('cartDrawer').classList.toggle('open');
   document.getElementById('cartOverlay').classList.toggle('show');
   document.getElementById('pageContent').classList.toggle('blur');
+
   renderCart();
 }
 
 function closeCart(){
+
   document.getElementById('cartDrawer').classList.remove('open');
   document.getElementById('cartOverlay').classList.remove('show');
   document.getElementById('pageContent').classList.remove('blur');
@@ -560,60 +574,67 @@ function closeCart(){
 
 document.getElementById('cartOverlay')?.addEventListener('click', closeCart);
 
+
 // ===============================
-// HERO CAROUSEL (ADMIN HERO)
+// HERO SLIDER
 // ===============================
 async function fetchHeroes(){
-  try {
-    // ✅ FIXED ENDPOINT
+
+  try{
+
     const res = await fetch(`${API_BASE}/api/hero`);
-    if (!res.ok) throw new Error("Hero fetch failed");
+    if(!res.ok) throw new Error("Hero fetch failed");
 
     const heroes = await res.json();
-    console.log("Heroes:", heroes);
 
     const heroSection = document.getElementById("heroSection");
-    if (!heroSection) return;
+    if(!heroSection) return;
 
-    // Remove old images
     heroSection.querySelectorAll("img").forEach(img => img.remove());
 
-    // ✅ FIXED FIELD NAME
     const activeHeroes = heroes.filter(h => h.active === true);
 
-    // Fallback image if none active
-    if (!activeHeroes.length) {
+    if(!activeHeroes.length){
+
       const fallback = document.createElement("img");
-      fallback.src =
-        "https://images.unsplash.com/photo-1507874457470-272b3c8d8ee2";
+      fallback.src = "https://images.unsplash.com/photo-1507874457470-272b3c8d8ee2";
       fallback.classList.add("active");
+
       heroSection.insertBefore(fallback, heroSection.firstChild);
+
       return;
     }
 
     let index = 0;
 
-    activeHeroes.forEach((h, i) => {
+    activeHeroes.forEach((h,i)=>{
+
       const img = document.createElement("img");
-      img.src = h.image; // ✅ correct backend field
+      img.src = h.image;
 
-      if (i === 0) img.classList.add("active");
+      if(i===0) img.classList.add("active");
 
-      // Insert below overlay
       heroSection.insertBefore(img, heroSection.firstChild);
+
     });
 
-    setInterval(() => {
-      const images = heroSection.querySelectorAll("img");
-      images.forEach(img => img.classList.remove("active"));
-      images[index].classList.add("active");
-      index = (index + 1) % images.length;
-    }, 5000);
+    setInterval(()=>{
 
-  } catch (err) {
+      const images = heroSection.querySelectorAll("img");
+
+      images.forEach(img=>img.classList.remove("active"));
+
+      images[index].classList.add("active");
+
+      index = (index+1) % images.length;
+
+    },5000);
+
+  }catch(err){
     console.error("Hero error:", err);
   }
 }
+
 
 // ===============================
 // FEATURED ARTISTES CAROUSEL
@@ -622,258 +643,211 @@ let currentIndex = 0;
 let autoScrollInterval = null;
 let isUserInteracting = false;
 
-// Fetch artistes from your backend and inject into the carousel
 async function fetchFeaturedArtistes(){
-  try {
+
+  try{
+
     const res = await fetch(`${API_BASE}/api/artistes`);
     const artistes = await res.json();
+
     const track = document.getElementById('featuredTrack');
 
-    track.innerHTML = '';
+    track.innerHTML = "";
 
-    artistes.forEach(a => {
+    artistes.forEach(a=>{
+
       track.innerHTML += `
         <div class="product-card">
-          <img src="${a.image}" alt="${a.name}">
+          <img src="${a.image}">
           <div class="product-info">
             <h3>${a.name}</h3>
           </div>
         </div>
       `;
+
     });
 
-    // Wait for DOM paint, then initialize carousel
-    requestAnimationFrame(() => {
-      initCarousel();
+    requestAnimationFrame(()=>initCarousel());
+
+    window.addEventListener('resize',()=>{
+      activateCard(currentIndex,false);
     });
 
-    // Recalculate center on resize
-    window.addEventListener('resize', () => {
-      activateCard(currentIndex, false);
-    });
-
-  } catch (err) {
-    console.error('Failed to fetch artistes', err);
+  }catch(err){
+    console.error("Failed to fetch artistes",err);
   }
 }
 
-// Activate a single card in the center
-function activateCard(index, smooth = true){
+
+function activateCard(index,smooth=true){
+
   const track = document.getElementById('featuredTrack');
   const cards = [...track.children];
-  if (!cards[index]) return;
 
-  cards.forEach(c => c.classList.remove('active'));
-  cards[index].classList.add('active');
+  if(!cards[index]) return;
 
-  cards[index].scrollIntoView({
-    behavior: smooth ? "smooth" : "auto",
-    inline: "center",
-    block: "nearest"
-  });
+  cards.forEach(c=>c.classList.remove("active"));
+  cards[index].classList.add("active");
 
-  currentIndex = index;
-}
-
-// Autoplay
-function startAutoplay(){
-  stopAutoplay();
-  const cards = document.getElementById('featuredTrack').children;
-  if (!cards.length) return;
-
-  autoScrollInterval = setInterval(() => {
-    if (isUserInteracting) return;
-    activateCard((currentIndex + 1) % cards.length);
-  }, 3500);
-}
-
-function stopAutoplay(){
-  if (autoScrollInterval) {
-    clearInterval(autoScrollInterval);
-    autoScrollInterval = null;
-  }
-}
-
-// Drag / touch scroll
-function enableTouchScroll(){
-  const track = document.getElementById('featuredTrack');
-  let startX = 0;
-  let scrollStart = 0;
-
-  track.addEventListener('pointerdown', e => {
-    isUserInteracting = true;
-    stopAutoplay();
-    startX = e.pageX;
-    scrollStart = track.scrollLeft;
-    track.setPointerCapture(e.pointerId);
-  });
-
-  track.addEventListener('pointermove', e => {
-    if (!isUserInteracting) return;
-    track.scrollLeft = scrollStart + (startX - e.pageX);
-  });
-
-  track.addEventListener('pointerup', () => {
-    isUserInteracting = false;
-    snapToClosestCard();
-    startAutoplay();
-  });
-}
-
-// Snap carousel to closest card after drag
-function snapToClosestCard(){
-  const track = document.getElementById('featuredTrack');
-  const cards = [...track.children];
-  const trackCenter = track.getBoundingClientRect().left + track.offsetWidth / 2;
-
-  let closest = 0;
-  let min = Infinity;
-
-  cards.forEach((c, i) => {
-    const rect = c.getBoundingClientRect();
-    const center = rect.left + rect.width / 2;
-    const dist = Math.abs(trackCenter - center);
-    if (dist < min) {
-      min = dist;
-      closest = i;
-    }
-  });
-
-  activateCard(closest);
-}
-
-// Initialize carousel
-function initCarousel(){
-  const track = document.getElementById('featuredTrack');
-  if (!track.children.length) return;
-
-  currentIndex = 0;
-  activateCard(0, false);
-  enableTouchScroll();
-  startAutoplay();
-}
-
-// Optional: Next / Prev buttons
-document.getElementById('prevBtn').addEventListener('click', () => {
-  const cards = document.getElementById('featuredTrack').children;
-  if (!cards.length) return;
-  activateCard((currentIndex - 1 + cards.length) % cards.length);
-});
-
-document.getElementById('nextBtn').addEventListener('click', () => {
-  const cards = document.getElementById('featuredTrack').children;
-  if (!cards.length) return;
-  activateCard((currentIndex + 1) % cards.length);
-});
-
-// Call this to fetch artistes and initialize everything
-fetchFeaturedArtistes();
-
-// ===============================
-// CAROUSEL HELPERS (FIXED)
-// ===============================
-
-function activateCard(index, smooth = true) {
-  const track = document.getElementById('featuredTrack');
-  const cards = [...track.children];
-  if (!cards[index]) return;
-
-  cards.forEach(c => c.classList.remove('active'));
-  cards[index].classList.add('active');
-
-  // Horizontal centering WITHOUT vertical scroll
   const card = cards[index];
+
   const offset =
     card.offsetLeft -
-    (track.clientWidth / 2 - card.clientWidth / 2);
+    (track.clientWidth/2 - card.clientWidth/2);
 
   track.scrollTo({
-    left: offset,
-    behavior: smooth ? "smooth" : "auto"
+    left:offset,
+    behavior:smooth ? "smooth":"auto"
   });
 
   currentIndex = index;
 }
 
-function startAutoplay() {
+
+function startAutoplay(){
+
   stopAutoplay();
-  autoScrollInterval = setInterval(() => {
-    if (isUserInteracting) return;
+
+  autoScrollInterval = setInterval(()=>{
+
+    if(isUserInteracting) return;
+
     const track = document.getElementById('featuredTrack');
     const cards = track.children;
-    activateCard((currentIndex + 1) % cards.length);
-  }, 3500);
+
+    activateCard((currentIndex+1)%cards.length);
+
+  },3500);
 }
 
-function stopAutoplay() {
-  if (autoScrollInterval) {
+
+function stopAutoplay(){
+
+  if(autoScrollInterval){
+
     clearInterval(autoScrollInterval);
     autoScrollInterval = null;
+
   }
 }
 
-function enableTouchScroll() {
+
+function enableTouchScroll(){
+
   const track = document.getElementById('featuredTrack');
+
   let startX = 0;
   let scrollStart = 0;
 
-  track.addEventListener('pointerdown', e => {
+  track.addEventListener('pointerdown',e=>{
+
     isUserInteracting = true;
+
     stopAutoplay();
+
     startX = e.pageX;
     scrollStart = track.scrollLeft;
+
     track.setPointerCapture(e.pointerId);
+
   });
 
-  track.addEventListener('pointermove', e => {
-    if (!isUserInteracting) return;
+  track.addEventListener('pointermove',e=>{
+
+    if(!isUserInteracting) return;
+
     track.scrollLeft = scrollStart + (startX - e.pageX);
+
   });
 
-  track.addEventListener('pointerup', () => {
+  track.addEventListener('pointerup',()=>{
+
     isUserInteracting = false;
+
     snapToClosestCard();
+
     startAutoplay();
+
   });
+
 }
 
-function snapToClosestCard() {
+
+function snapToClosestCard(){
+
   const track = document.getElementById('featuredTrack');
   const cards = [...track.children];
-  const trackCenter = track.scrollLeft + track.clientWidth / 2;
+
+  const trackCenter = track.scrollLeft + track.clientWidth/2;
 
   let closestIndex = 0;
   let minDistance = Infinity;
 
-  cards.forEach((card, i) => {
-    const cardCenter = card.offsetLeft + card.clientWidth / 2;
+  cards.forEach((card,i)=>{
+
+    const cardCenter = card.offsetLeft + card.clientWidth/2;
+
     const distance = Math.abs(trackCenter - cardCenter);
-    if (distance < minDistance) {
+
+    if(distance < minDistance){
       minDistance = distance;
       closestIndex = i;
     }
+
   });
 
   activateCard(closestIndex);
 }
 
+
+function initCarousel(){
+
+  const track = document.getElementById('featuredTrack');
+
+  if(!track.children.length) return;
+
+  currentIndex = 0;
+
+  activateCard(0,false);
+
+  enableTouchScroll();
+
+  startAutoplay();
+
+}
+
+
 // ===============================
-// ARROWS
+// CAROUSEL ARROWS
 // ===============================
-document.getElementById('prevBtn')?.addEventListener('click', () => {
-  activateCard(currentIndex - 1 < 0 ? document.getElementById('featuredTrack').children.length - 1 : currentIndex - 1);
+document.getElementById('prevBtn')?.addEventListener('click',()=>{
+
+  const track = document.getElementById('featuredTrack');
+  const cards = track.children;
+
+  activateCard(
+    currentIndex - 1 < 0 ? cards.length - 1 : currentIndex - 1
+  );
+
 });
 
-document.getElementById('nextBtn')?.addEventListener('click', () => {
-  activateCard((currentIndex + 1) % document.getElementById('featuredTrack').children.length);
+document.getElementById('nextBtn')?.addEventListener('click',()=>{
+
+  const track = document.getElementById('featuredTrack');
+  const cards = track.children;
+
+  activateCard((currentIndex + 1) % cards.length);
+
 });
+
 
 // ===============================
 // INIT
 // ===============================
 updateCartCount();
 fetchHeroes();
-fetchFeaturedTickets();
+fetchFeaturedArtistes();
+
 </script>
 </body>
 </html>
