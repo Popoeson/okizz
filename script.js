@@ -63,9 +63,8 @@ document.addEventListener('DOMContentLoaded', () => {
     revealTargets.forEach(el => observer.observe(el));
   }
 
-  // Blueprint hero: scatter grid dots
-  const dotsGroup = document.querySelector('.bp-dots');
-  if (dotsGroup) {
+  // Blueprint illustrations: scatter grid dots (page may have more than one)
+  document.querySelectorAll('.bp-dots').forEach(dotsGroup => {
     const cols = 10, rows = 8, spacingX = 40, spacingY = 42.5;
     for (let r = 0; r <= rows; r++) {
       for (let c = 0; c <= cols; c++) {
@@ -78,7 +77,17 @@ document.addEventListener('DOMContentLoaded', () => {
         dotsGroup.appendChild(dot);
       }
     }
-  }
+  });
+
+  // Donation frequency toggle (visual only — no payment processing yet)
+  document.querySelectorAll('.freq-toggle').forEach(toggle => {
+    toggle.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        toggle.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+    });
+  });
 
   // Placeholder contact form handling
   const form = document.getElementById('contact-form');
