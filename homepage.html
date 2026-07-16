@@ -53,32 +53,49 @@
     <div class="hero-grid" aria-hidden="true"></div>
     <div class="container hero-inner">
       <div class="hero-copy">
-        <p class="eyebrow"><span class="eyebrow-dot"></span>Owu College Foundation</p>
-        <h1 class="hero-title">Investing in Education, <em>Inspiring Generations.</em></h1>
-        <p class="hero-sub">We mobilize communities, partners, and donors to renovate and equip primary and secondary schools — building safe, conducive learning environments that empower children and strengthen the foundation of education.</p>
+        <p class="eyebrow eyebrow-pill"><span class="eyebrow-dot"></span>Every gift opens a classroom door</p>
+        <h1 class="hero-title">Investing in education, <em>inspiring generations.</em></h1>
+        <p class="hero-sub">The Owu College Foundation turns generosity into opportunity — mobilizing communities, partners, and donors to renovate and equip schools so every child learns in an environment built for their potential.</p>
         <div class="hero-actions">
-          <a href="#involved" class="btn btn-primary">Get Involved <i data-lucide="arrow-right"></i></a>
-          <a href="#about" class="btn btn-ghost">Our Mission</a>
+          <a href="#involved" class="btn btn-primary"><i data-lucide="heart"></i> Donate now</a>
+          <a href="#about" class="btn btn-ghost">Learn more <i data-lucide="arrow-right"></i></a>
         </div>
       </div>
 
-      <div class="hero-visual" aria-hidden="true">
-        <svg viewBox="0 0 400 340" class="blueprint-svg" id="blueprint-svg">
-          <!-- grid dots -->
-          <g class="bp-dots"></g>
-          <!-- schoolhouse line drawing -->
-          <g class="bp-drawing" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-            <path class="bp-line" d="M60 190 L200 90 L340 190" />
-            <path class="bp-line" d="M85 190 L85 270 L315 270 L315 190" />
-            <path class="bp-line" d="M200 90 L200 55" />
-            <circle class="bp-line" cx="200" cy="48" r="7" />
-            <path class="bp-line" d="M150 270 L150 220 L250 220 L250 270" />
-            <path class="bp-line" d="M110 240 L130 240 L130 260 L110 260 Z" />
-            <path class="bp-line" d="M270 240 L290 240 L290 260 L270 260 Z" />
-            <path class="bp-line" d="M85 190 L315 190" stroke-dasharray="4 6" />
-          </g>
-          <text x="200" y="308" text-anchor="middle" class="bp-caption">SCHOOL NO. 001 — REHABILITATION</text>
-        </svg>
+      <div class="hero-photo-frame">
+        <div class="photo-placeholder hero-photo">
+          <i data-lucide="image"></i>
+          <span>Photo placeholder — add a photo of your school or students</span>
+        </div>
+        <div class="hero-badge">
+          <i data-lucide="school"></i>
+          <div>
+            <div class="hero-badge-title">First renovation</div>
+            <div class="hero-badge-sub"><span class="placeholder-tag">Add school name</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ STATS / GOALS BAR ============ -->
+  <section class="stats-bar">
+    <div class="container stats-grid">
+      <div>
+        <div class="stat-number"><span class="placeholder-tag placeholder-tag-dark">Add #</span></div>
+        <div class="stat-label">Schools targeted</div>
+      </div>
+      <div>
+        <div class="stat-number"><span class="placeholder-tag placeholder-tag-dark">Add #</span></div>
+        <div class="stat-label">Children reached</div>
+      </div>
+      <div>
+        <div class="stat-number"><span class="placeholder-tag placeholder-tag-dark">Add #</span></div>
+        <div class="stat-label">Scholarships planned</div>
+      </div>
+      <div>
+        <div class="stat-number"><span class="placeholder-tag placeholder-tag-dark">Add #</span></div>
+        <div class="stat-label">Communities engaged</div>
       </div>
     </div>
   </section>
@@ -86,8 +103,9 @@
   <!-- ============ ABOUT ============ -->
   <section class="section" id="about">
     <div class="container">
-      <p class="eyebrow">About Us</p>
-      <h2 class="section-title">Vision &amp; Mission</h2>
+      <p class="eyebrow eyebrow-center">Our Mission</p>
+      <h2 class="section-title center">We believe every child deserves a school worth learning in.</h2>
+      <p class="section-lede center" style="max-width:56ch;">Owu College Foundation exists to close the gap between children and a safe, functional classroom. Gifts fund school renovations, scholarships, and community outreach — every naira directed where it changes a life.</p>
 
       <div class="vm-grid">
         <div class="vm-card">
@@ -140,7 +158,19 @@
         <p>The Foundation was therefore created to mobilize resources, inspire partnerships, and implement impactful programmes that improve educational infrastructure, empower young people, strengthen communities, and promote social development.</p>
       </div>
       <div class="origin-card">
-        <i data-lucide="landmark" class="origin-icon"></i>
+        <svg viewBox="0 0 400 340" class="blueprint-svg blueprint-svg-sm" aria-hidden="true">
+          <g class="bp-dots"></g>
+          <g class="bp-drawing" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <path class="bp-line" d="M60 190 L200 90 L340 190" />
+            <path class="bp-line" d="M85 190 L85 270 L315 270 L315 190" />
+            <path class="bp-line" d="M200 90 L200 55" />
+            <circle class="bp-line" cx="200" cy="48" r="7" />
+            <path class="bp-line" d="M150 270 L150 220 L250 220 L250 270" />
+            <path class="bp-line" d="M110 240 L130 240 L130 260 L110 260 Z" />
+            <path class="bp-line" d="M270 240 L290 240 L290 260 L270 260 Z" />
+            <path class="bp-line" d="M85 190 L315 190" stroke-dasharray="4 6" />
+          </g>
+        </svg>
         <span class="origin-label">Founded by</span>
         <span class="origin-name">OWUTECH</span>
         <span class="origin-year">Est. <span class="placeholder-tag">[ADD YEAR]</span></span>
@@ -157,19 +187,34 @@
 
       <div class="card-grid">
         <div class="program-card">
-          <i data-lucide="hammer"></i>
-          <h3>School Infrastructure</h3>
-          <p>Renovating and equipping classrooms, furniture, sanitation, and facilities in public and rural schools.</p>
+          <div class="photo-placeholder">
+            <i data-lucide="hammer"></i>
+            <span>Photo placeholder</span>
+          </div>
+          <div class="program-body">
+            <h3>School Infrastructure</h3>
+            <p>Renovating and equipping classrooms, furniture, sanitation, and facilities in public and rural schools.</p>
+          </div>
         </div>
         <div class="program-card">
-          <i data-lucide="graduation-cap"></i>
-          <h3>Scholarships</h3>
-          <p>Supporting pupils and out-of-school children with the means to access and stay in education.</p>
+          <div class="photo-placeholder">
+            <i data-lucide="graduation-cap"></i>
+            <span>Photo placeholder</span>
+          </div>
+          <div class="program-body">
+            <h3>Scholarships</h3>
+            <p>Supporting pupils and out-of-school children with the means to access and stay in education.</p>
+          </div>
         </div>
         <div class="program-card">
-          <i data-lucide="stethoscope"></i>
-          <h3>Health Outreach</h3>
-          <p>Improving access to basic healthcare for pupils, teachers, and vulnerable community members.</p>
+          <div class="photo-placeholder">
+            <i data-lucide="stethoscope"></i>
+            <span>Photo placeholder</span>
+          </div>
+          <div class="program-body">
+            <h3>Health Outreach</h3>
+            <p>Improving access to basic healthcare for pupils, teachers, and vulnerable community members.</p>
+          </div>
         </div>
         <div class="program-card program-card-more">
           <i data-lucide="plus-circle"></i>
@@ -227,7 +272,19 @@
         <div class="involved-card featured">
           <i data-lucide="banknote"></i>
           <h3>Donate</h3>
-          <p>Support a renovation, a scholarship, or a health outreach directly.</p>
+          <p>Support a renovation, a scholarship, or a health outreach directly — by bank transfer.</p>
+
+          <ul class="checklist" style="margin-bottom: var(--sp-2);">
+            <li><i data-lucide="check-circle"></i><span>100% directed to school renovation and programmes</span></li>
+            <li><i data-lucide="check-circle"></i><span>Full transparency on how funds are used</span></li>
+            <li><i data-lucide="check-circle"></i><span>Secure, direct bank transfer</span></li>
+          </ul>
+
+          <div class="freq-toggle" style="margin-bottom: var(--sp-2);">
+            <button type="button" class="active">One-time</button>
+            <button type="button">Monthly</button>
+          </div>
+
           <div class="bank-placeholder">
             <div class="bank-row"><span>Bank Name</span><span class="placeholder-tag">Coming soon</span></div>
             <div class="bank-row"><span>Account Name</span><span class="placeholder-tag">Coming soon</span></div>
