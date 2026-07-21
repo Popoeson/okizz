@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plain Reader — JSON, translated</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper: #E9E7E1;
+    --paper-2: #DFDCD3;
+    --card: #FFFFFF;
+    --ink: #1D2333;
+    --ink-soft: #5B6178;
+    --ink-faint: #8A8F9F;
+    --border: #D8D4C9;
+    --accent-key: #3654D6;
+    --accent-key-soft: #E8ECFB;
+    --accent-string: #1F9E6D;
+    --accent-string-soft: #E2F5EC;
+    --accent-number: #C96A26;
+    --accent-number-soft: #FBEADD;
+    --accent-error: #C1382E;
+    --radius: 10px;
+    --shadow: 0 1px 2px rgba(29,35,51,0.06), 0 6px 20px rgba(29,35,51,0.05);
+  }
+
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background: var(--paper);
+    background-image:
+      radial-gradient(circle at 1px 1px, rgba(29,35,51,0.05) 1px, transparent 0);
+    background-size: 22px 22px;
+    color: var(--ink);
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+  }
+
+  a{ color: var(--accent-key); }
+
+  .app{ max-width: 1180px; margin: 0 auto; padding: 28px 20px 80px; }
+
+  /* ---------- Header ---------- */
+  .topbar{ display:flex; align-items:flex-start; gap:16px; margin-bottom: 28px; }
+  .brand-mark{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--card);
+    background: var(--ink);
+    width: 44px; height: 44px;
+    border-radius: 10px;
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+  }
+  .brand-mark::after{
+    content:"Aa";
+    font-family:'IBM Plex Serif', serif;
+    position:absolute;
+    inset:0;
+    display:flex; align-items:center; justify-content:center;
+    background: var(--accent-string);
+    color:#fff;
+    transform: translateY(100%);
+    transition: transform 0.5s cubic-bezier(.7,0,.2,1);
+  }
+  .brand-mark:hover::after{ transform: translateY(0); }
+  h1{
+    font-family:'IBM Plex Serif', serif;
+    font-weight: 600;
+    font-size: 26px;
+    margin: 0 0 2px;
+    letter-spacing: -0.01em;
+  }
+  .tagline{ margin:0; color: var(--ink-soft); font-size: 14.5px; max-width: 46ch; }
+
+  /* ---------- Dropzone ---------- */
+  .dropzone{
+    background: var(--card);
+    border: 1.5px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 56px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .18s ease, background .18s ease;
+    box-shadow: var(--shadow);
+  }
+  .dropzone.dragover{
+    border-color: var(--accent-key);
+    background: var(--accent-key-soft);
+  }
+  .dropzone .dz-icon{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 13px;
+    color: var(--ink-faint);
+    letter-spacing: 0.08em;
+    margin-bottom: 14px;
+  }
+  .dropzone h2{
+    font-family:'IBM Plex Serif', serif;
+    font-weight: 600;
+    font-size: 19px;
+    margin: 0 0 6px;
+  }
+  .dropzone p{ margin:0; color: var(--ink-soft); font-size: 14px; }
+  .dropzone .browse-hint{
+    display:inline-block; margin-top: 16px;
+    font-size: 13px; font-weight: 600; color: var(--accent-key);
+    padding: 8px 16px; border-radius: 999px; background: var(--accent-key-soft);
+  }
+
+  /* ---------- Error ---------- */
+  .error-box{
+    background: #FBEBEA; border: 1px solid #EBC5C1; color: var(--accent-error);
+    border-radius: var(--radius); padding: 14px 16px; font-size: 14px; margin-top: 16px;
+  }
+  .error-box strong{ display:block; margin-bottom: 2px; }
+  .hidden{ display:none !important; }
+
+  /* ---------- Workspace toolbar ---------- */
+  .workspace{ margin-top: 22px; }
+  .toolbar{
+    display:flex; flex-wrap: wrap; align-items:center; gap: 12px;
+    margin-bottom: 16px;
+  }
+  .stats{
+    font-size: 13px; color: var(--ink-soft);
+    font-family:'IBM Plex Mono', monospace;
+  }
+  .stats b{ color: var(--ink); }
+  #search{
+    flex: 1 1 200px; min-width: 160px;
+    padding: 9px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    font-family: inherit;
+    font-size: 14px;
+    color: var(--ink);
+  }
+  #search:focus{ outline: 2px solid var(--accent-key); outline-offset: 1px; }
+
+  .global-toggle{ display:flex; border-radius: 999px; overflow:hidden; border:1px solid var(--border); }
+  .mode-btn{
+    font-family:'IBM Plex Sans', sans-serif;
+    font-size: 13px; font-weight: 600;
+    padding: 8px 14px;
+    background: var(--card); color: var(--ink-soft);
+    border: none; cursor: pointer;
+  }
+  .mode-btn.active{ background: var(--ink); color: var(--card); }
+
+  .ghost-btn{
+    background: none; border: 1px solid var(--border); color: var(--ink-soft);
+    font-family: inherit; font-size: 13px; font-weight: 600;
+    padding: 8px 14px; border-radius: 999px; cursor: pointer;
+  }
+  .ghost-btn:hover{ border-color: var(--ink); color: var(--ink); }
+
+  /* ---------- Collections nav ---------- */
+  .collections-nav{ display:flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .collection-tab{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 12.5px;
+    background: var(--card); border: 1px solid var(--border); color: var(--ink-soft);
+    padding: 6px 12px; border-radius: 999px; cursor: pointer;
+  }
+  .collection-tab.active{ background: var(--accent-key); border-color: var(--accent-key); color:#fff; }
+
+  /* ---------- Cards ---------- */
+  .cards-grid{
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+  }
+  .card{
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    display:flex; flex-direction:column;
+    overflow: hidden;
+  }
+  .card-head{
+    display:flex; align-items:flex-start; justify-content:space-between; gap: 10px;
+    padding: 14px 16px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .card-head h3{
+    font-family:'IBM Plex Serif', serif;
+    font-weight: 600; font-size: 16px; margin: 0;
+    line-height:1.3;
+    word-break: break-word;
+  }
+  .card-badge{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em;
+    padding: 2px 7px; border-radius: 5px; margin-top: 3px; display:inline-block;
+  }
+  .card[data-mode="readable"] .card-badge{ background: var(--accent-string-soft); color: var(--accent-string); }
+  .card[data-mode="json"] .card-badge{ background: var(--accent-number-soft); color: var(--accent-number); }
+
+  /* the signature toggle */
+  .card-toggle{ background:none; border:none; cursor:pointer; padding:0; flex-shrink:0; }
+  .toggle-track{
+    position: relative;
+    width: 60px; height: 28px;
+    background: var(--paper-2);
+    border-radius: 999px;
+    display:flex; align-items:center;
+  }
+  .toggle-option{
+    flex:1; text-align:center; z-index:1; font-size: 12px; line-height:1;
+  }
+  .opt-plain{ font-family:'IBM Plex Serif', serif; font-weight:600; color: var(--ink-soft); }
+  .opt-json{ font-family:'IBM Plex Mono', monospace; color: var(--ink-soft); }
+  .toggle-thumb{
+    position:absolute; top:2px; left:2px;
+    width: 28px; height: 24px;
+    background: var(--ink);
+    border-radius: 999px;
+    transition: transform .28s cubic-bezier(.7,0,.2,1);
+  }
+  .card[data-mode="json"] .toggle-thumb{ transform: translateX(30px); }
+  .card[data-mode="readable"] .opt-plain,
+  .card[data-mode="json"] .opt-json{ color:#fff; }
+  @media (prefers-reduced-motion: reduce){
+    .toggle-thumb, .brand-mark::after{ transition: none; }
+  }
+
+  .card-body{ padding: 14px 16px 16px; flex:1; }
+  .readable-view.hidden, .json-view.hidden{ display:none; }
+
+  /* readable field list */
+  .field-list{ margin:0; display:flex; flex-direction:column; gap: 9px; }
+  .field-list.nested{ margin-top: 6px; padding-left: 12px; border-left: 2px solid var(--border); }
+  .field-row{ display:flex; flex-direction:column; gap: 1px; }
+  .field-row dt{
+    font-size: 11px; font-weight:600; text-transform: uppercase; letter-spacing:0.04em;
+    color: var(--ink-faint);
+  }
+  .field-row dd{ margin:0; font-size: 14.5px; color: var(--ink); line-height:1.4; word-break: break-word; }
+
+  .muted{ color: var(--ink-faint); font-style: italic; }
+  .mono.ref{ font-family:'IBM Plex Mono', monospace; font-size: 12.5px; color: var(--ink-soft); }
+  .pill{ font-size: 12px; font-weight:600; padding: 1px 8px; border-radius:999px; display:inline-block; }
+  .pill-yes{ background: var(--accent-string-soft); color: var(--accent-string); }
+  .pill-no{ background: #F1EFE9; color: var(--ink-soft); }
+
+  .chip-list{ display:flex; flex-wrap:wrap; gap:6px; }
+  .chip{ background: var(--accent-key-soft); color: var(--accent-key); font-size:12.5px; padding:2px 9px; border-radius:999px; }
+
+  .nested-list{ display:flex; flex-direction:column; gap:10px; margin-top:4px; }
+  .nested-item{ background: var(--paper); border-radius: 8px; padding: 8px 10px; }
+  .nested-index{ font-family:'IBM Plex Mono', monospace; font-size:11px; color: var(--ink-faint); display:block; margin-bottom:4px; }
+
+  .json-preview-collapsed{
+    font-family:'IBM Plex Mono', monospace; font-size: 12px; color: var(--ink-soft);
+    background: var(--paper); padding: 6px 9px; border-radius: 6px; display:block; white-space:pre-wrap;
+  }
+
+  .json-view{
+    margin:0; font-family:'IBM Plex Mono', monospace; font-size: 12.5px; line-height:1.55;
+    background: #1D2333; color: #DCE0EE; padding: 14px; border-radius: 8px;
+    overflow-x: auto; white-space: pre-wrap; word-break: break-word;
+  }
+  .json-view .k{ color: #8FB2FF; }
+  .json-view .s{ color: #8FE0BB; }
+  .json-view .n{ color: #F2B074; }
+  .json-view .b{ color: #F0A6A6; }
+
+  .load-more-wrap{ display:flex; justify-content:center; margin-top: 22px; }
+  #loadMoreBtn{
+    font-family:'IBM Plex Sans'; font-weight:600; font-size: 13.5px;
+    background: var(--ink); color:#fff; border:none; padding: 10px 22px;
+    border-radius: 999px; cursor:pointer;
+  }
+
+  footer.note{
+    text-align:center; color: var(--ink-faint); font-size: 12.5px; margin-top: 40px;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="topbar">
+    <div class="brand-mark">{ }</div>
+    <div>
+      <h1>Plain Reader</h1>
+      <p class="tagline">Upload any JSON export and read it as plain English instead of code — one card per record, toggle back to raw JSON any time.</p>
+    </div>
+  </div>
+
+  <section id="dropzone" class="dropzone" tabindex="0" role="button" aria-label="Upload a JSON file">
+    <div class="dz-icon">.JSON</div>
+    <h2>Drop a JSON file here</h2>
+    <p>or click to browse — nothing leaves your browser</p>
+    <span class="browse-hint">Choose file</span>
+    <input type="file" id="fileInput" accept=".json,application/json" class="hidden">
+  </section>
+
+  <div id="errorBox" class="error-box hidden"></div>
+
+  <section id="workspace" class="workspace hidden">
+    <div class="toolbar">
+      <div class="stats" id="stats"></div>
+      <input type="search" id="search" placeholder="Search records…">
+      <div class="global-toggle">
+        <button id="allReadableBtn" class="mode-btn active">Aa Plain English</button>
+        <button id="allJsonBtn" class="mode-btn">{ } Raw JSON</button>
+      </div>
+      <button id="newFileBtn" class="ghost-btn">Upload another file</button>
+    </div>
+
+    <div id="collectionsNav" class="collections-nav hidden"></div>
+
+    <div id="cardsGrid" class="cards-grid"></div>
+
+    <div id="loadMoreWrap" class="load-more-wrap hidden">
+      <button id="loadMoreBtn">Show more records</button>
+    </div>
+  </section>
+
+  <footer class="note">Runs entirely in your browser. Your file is never uploaded anywhere.</footer>
+</div>
+
+<script>
+(function(){
+  const PAGE_SIZE = 30;
+
+  const dropzone = document.getElementById('dropzone');
+  const fileInput = document.getElementById('fileInput');
+  const errorBox = document.getElementById('errorBox');
+  const workspace = document.getElementById('workspace');
+  const statsEl = document.getElementById('stats');
+  const searchEl = document.getElementById('search');
+  const collectionsNav = document.getElementById('collectionsNav');
+  const cardsGrid = document.getElementById('cardsGrid');
+  const loadMoreWrap = document.getElementById('loadMoreWrap');
+  const loadMoreBtn = document.getElementById('loadMoreBtn');
+  const allReadableBtn = document.getElementById('allReadableBtn');
+  const allJsonBtn = document.getElementById('allJsonBtn');
+  const newFileBtn = document.getElementById('newFileBtn');
+
+  let collections = {};      // { name: [records] }
+  let collectionNames = [];
+  let activeCollection = null;
+  let filteredRecords = [];
+  let renderedCount = 0;
+  let currentGlobalMode = 'readable';
+
+  // ---------- helpers ----------
+  function escapeHtml(str){
+    return String(str)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;');
+  }
+
+  const ACRONYMS = new Set(['id','url','api','ip','otp','jwt','pdf','ngn','usd','cors','dns','mx','spf','dmarc','sms','ai','ok','cta','seo','html','css','js','sdk','uuid','ttl','cdn']);
+
+  function humanizeKey(key){
+    let s = String(key)
+      .replace(/[_\-]+/g, ' ')
+      .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+      .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
+      .trim()
+      .toLowerCase();
+    if(!s) return key;
+    return s.split(' ').filter(Boolean).map(w =>
+      ACRONYMS.has(w) ? w.toUpperCase() : (w.charAt(0).toUpperCase() + w.slice(1))
+    ).join(' ');
+  }
+
+  function isISODate(str){
+    return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})?$/.test(str);
+  }
+  function formatDate(str){
+    const d = new Date(str);
+    if(isNaN(d.getTime())) return str;
+    return d.toLocaleString(undefined, { year:'numeric', month:'long', day:'numeric', hour:'numeric', minute:'2-digit' });
+  }
+  function isObjectId(str){ return /^[a-f0-9]{24}$/i.test(str); }
+  function isEmail(str){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(str); }
+  function isURL(str){ return /^https?:\/\//i.test(str); }
+
+  function collapsedPreview(value){
+    let json = JSON.stringify(value);
+    if(json.length > 90) json = json.slice(0, 90) + '…';
+    return '<span class="json-preview-collapsed">' + escapeHtml(json) + '</span>';
+  }
+
+  function renderValue(key, value, depth){
+    if(value === null || value === undefined || value === '') return '<span class="muted">Not set</span>';
+
+    if(typeof value === 'boolean'){
+      return value ? '<span class="pill pill-yes">Yes</span>' : '<span class="pill pill-no">No</span>';
+    }
+
+    if(typeof value === 'number'){
+      const lowKey = key.toLowerCase();
+      if(lowKey.includes('kobo')){
+        return '₦' + (value/100).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+      }
+      return value.toLocaleString();
+    }
+
+    if(typeof value === 'string'){
+      if(isISODate(value)) return escapeHtml(formatDate(value));
+      if(isObjectId(value)) return '<span class="mono ref">' + escapeHtml(value) + '</span>';
+      if(isEmail(value)) return '<a href="mailto:' + escapeHtml(value) + '">' + escapeHtml(value) + '</a>';
+      if(isURL(value)) return '<a href="' + escapeHtml(value) + '" target="_blank" rel="noopener">' + escapeHtml(value) + '</a>';
+      return escapeHtml(value);
+    }
+
+    if(Array.isArray(value)){
+      if(value.length === 0) return '<span class="muted">None</span>';
+      const allPrimitive = value.every(v => v === null || typeof v !== 'object');
+      if(allPrimitive){
+        return '<div class="chip-list">' + value.map(v => '<span class="chip">' + escapeHtml(String(v)) + '</span>').join('') + '</div>';
+      }
+      if(depth >= 3) return collapsedPreview(value);
+      return '<div class="nested-list">' + value.map((v,i) =>
+        '<div class="nested-item"><span class="nested-index">Item ' + (i+1) + '</span>' + renderFieldList(v, depth+1) + '</div>'
+      ).join('') + '</div>';
+    }
+
+    if(typeof value === 'object'){
+      if(depth >= 3) return collapsedPreview(value);
+      return renderFieldList(value, depth+1);
+    }
+
+    return escapeHtml(String(value));
+  }
+
+  function renderFieldList(obj, depth){
+    depth = depth || 0;
+    if(obj === null || typeof obj !== 'object') return renderValue('value', obj, depth);
+    const entries = Object.entries(obj);
+    if(entries.length === 0) return '<span class="muted">Empty</span>';
+    return '<dl class="field-list' + (depth > 0 ? ' nested' : '') + '">' +
+      entries.map(([k,v]) =>
+        '<div class="field-row"><dt>' + escapeHtml(humanizeKey(k)) + '</dt><dd>' + renderValue(k, v, depth) + '</dd></div>'
+      ).join('') +
+    '</dl>';
+  }
+
+  function syntaxHighlightJson(obj){
+    const json = JSON.stringify(obj, null, 2);
+    const escaped = escapeHtml(json);
+    return escaped.replace(
+      /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+      function(match){
+        let cls = 'n';
+        if(/^"/.test(match)){
+          cls = /:$/.test(match) ? 'k' : 's';
+        } else if(/true|false/.test(match)){
+          cls = 'b';
+        } else if(/null/.test(match)){
+          cls = 'b';
+        }
+        return '<span class="' + cls + '">' + match + '</span>';
+      }
+    );
+  }
+
+  const TITLE_CANDIDATES = ['title','name','fullName','fullname','certificateId','reference','email','username','firstName'];
+
+  function guessTitle(record, index){
+    if(record && typeof record === 'object' && !Array.isArray(record)){
+      for(const c of TITLE_CANDIDATES){
+        if(record[c] && (typeof record[c] === 'string' || typeof record[c] === 'number')){
+          if(c === 'firstName'){
+            return [record.firstName, record.surname].filter(Boolean).join(' ') || String(record[c]);
+          }
+          return String(record[c]);
+        }
+      }
+    }
+    return 'Record ' + (index + 1);
+  }
+
+  // ---------- card building ----------
+  function buildCard(record, index){
+    const card = document.createElement('article');
+    card.className = 'card';
+    card.dataset.mode = currentGlobalMode;
+
+    const title = guessTitle(record, index);
+    const readableHtml = (record && typeof record === 'object')
+      ? renderFieldList(record, 0)
+      : '<span>' + escapeHtml(String(record)) + '</span>';
+
+    card.innerHTML =
+      '<div class="card-head">' +
+        '<div><h3>' + escapeHtml(title) + '</h3><span class="card-badge">' + (currentGlobalMode === 'readable' ? 'Plain English' : 'Raw JSON') + '</span></div>' +
+        '<button class="card-toggle" aria-label="Toggle between plain English and JSON" aria-pressed="' + (currentGlobalMode==='json') + '">' +
+          '<span class="toggle-track">' +
+            '<span class="toggle-option opt-plain">Aa</span>' +
+            '<span class="toggle-option opt-json">{ }</span>' +
+            '<span class="toggle-thumb"></span>' +
+          '</span>' +
+        '</button>' +
+      '</div>' +
+      '<div class="card-body">' +
+        '<div class="readable-view' + (currentGlobalMode==='json' ? ' hidden' : '') + '">' + readableHtml + '</div>' +
+        '<pre class="json-view' + (currentGlobalMode==='readable' ? ' hidden' : '') + '"><code>' + syntaxHighlightJson(record) + '</code></pre>' +
+      '</div>';
+
+    const toggleBtn = card.querySelector('.card-toggle');
+    const badge = card.querySelector('.card-badge');
+    const readableView = card.querySelector('.readable-view');
+    const jsonView = card.querySelector('.json-view');
+
+    toggleBtn.addEventListener('click', function(){
+      const toJson = card.dataset.mode !== 'json';
+      card.dataset.mode = toJson ? 'json' : 'readable';
+      readableView.classList.toggle('hidden', toJson);
+      jsonView.classList.toggle('hidden', !toJson);
+      badge.textContent = toJson ? 'Raw JSON' : 'Plain English';
+      toggleBtn.setAttribute('aria-pressed', String(toJson));
+    });
+
+    return card;
+  }
+
+  // ---------- rendering / pagination ----------
+  function renderChunk(){
+    const next = filteredRecords.slice(renderedCount, renderedCount + PAGE_SIZE);
+    next.forEach((record, i) => {
+      cardsGrid.appendChild(buildCard(record, renderedCount + i));
+    });
+    renderedCount += next.length;
+    loadMoreWrap.classList.toggle('hidden', renderedCount >= filteredRecords.length);
+  }
+
+  function resetAndRender(){
+    cardsGrid.innerHTML = '';
+    renderedCount = 0;
+    renderChunk();
+    updateStats();
+  }
+
+  function updateStats(){
+    const total = filteredRecords.length;
+    const collLabel = collectionNames.length > 1 ? (' in "' + activeCollection + '"') : '';
+    statsEl.innerHTML = '<b>' + total.toLocaleString() + '</b> record' + (total===1?'':'s') + collLabel +
+      (renderedCount < total ? ' · showing ' + renderedCount.toLocaleString() : '');
+  }
+
+  function applyFilter(){
+    const q = searchEl.value.trim().toLowerCase();
+    const source = collections[activeCollection] || [];
+    filteredRecords = q
+      ? source.filter(r => JSON.stringify(r).toLowerCase().includes(q))
+      : source.slice();
+    resetAndRender();
+  }
+
+  function renderCollectionsNav(){
+    if(collectionNames.length <= 1){
+      collectionsNav.classList.add('hidden');
+      return;
+    }
+    collectionsNav.classList.remove('hidden');
+    collectionsNav.innerHTML = '';
+    collectionNames.forEach(name => {
+      const btn = document.createElement('button');
+      btn.className = 'collection-tab' + (name === activeCollection ? ' active' : '');
+      btn.textContent = name + ' (' + collections[name].length + ')';
+      btn.addEventListener('click', () => {
+        activeCollection = name;
+        [...collectionsNav.children].forEach(c => c.classList.remove('active'));
+        btn.classList.add('active');
+        searchEl.value = '';
+        applyFilter();
+      });
+      collectionsNav.appendChild(btn);
+    });
+  }
+
+  function setGlobalMode(mode){
+    currentGlobalMode = mode;
+    allReadableBtn.classList.toggle('active', mode === 'readable');
+    allJsonBtn.classList.toggle('active', mode === 'json');
+    document.querySelectorAll('.card').forEach(card => {
+      const toJson = mode === 'json';
+      card.dataset.mode = mode;
+      card.querySelector('.readable-view').classList.toggle('hidden', toJson);
+      card.querySelector('.json-view').classList.toggle('hidden', !toJson);
+      card.querySelector('.card-badge').textContent = toJson ? 'Raw JSON' : 'Plain English';
+      card.querySelector('.card-toggle').setAttribute('aria-pressed', String(toJson));
+    });
+  }
+
+  // ---------- file handling ----------
+  function detectShape(data){
+    if(Array.isArray(data)){
+      return { Records: data };
+    }
+    if(data && typeof data === 'object'){
+      const values = Object.values(data);
+      const looksLikeCollections = values.length > 0 && values.every(v => Array.isArray(v));
+      if(looksLikeCollections) return data;
+      return { Record: [data] };
+    }
+    return { Value: [ { value: data } ] };
+  }
+
+  function showError(msg){
+    errorBox.innerHTML = '<strong>Couldn\u2019t read that file</strong>' + escapeHtml(msg);
+    errorBox.classList.remove('hidden');
+  }
+
+  function handleFile(file){
+    errorBox.classList.add('hidden');
+    if(!file){ return; }
+    if(!/\.json$/i.test(file.name) && file.type !== 'application/json'){
+      // allow anyway, just parse and see
+    }
+    const reader = new FileReader();
+    reader.onload = function(e){
+      let data;
+      try{
+        data = JSON.parse(e.target.result);
+      }catch(err){
+        showError('This doesn\u2019t look like valid JSON — ' + err.message);
+        return;
+      }
+      collections = detectShape(data);
+      collectionNames = Object.keys(collections);
+      if(collectionNames.length === 0 || collectionNames.every(n => collections[n].length === 0)){
+        showError('The file parsed fine, but there were no records inside it.');
+        return;
+      }
+      activeCollection = collectionNames[0];
+      currentGlobalMode = 'readable';
+      setGlobalModeButtonsOnly('readable');
+      renderCollectionsNav();
+      searchEl.value = '';
+      applyFilter();
+      dropzone.classList.add('hidden');
+      workspace.classList.remove('hidden');
+    };
+    reader.onerror = function(){ showError('The file could not be read.'); };
+    reader.readAsText(file);
+  }
+
+  function setGlobalModeButtonsOnly(mode){
+    allReadableBtn.classList.toggle('active', mode === 'readable');
+    allJsonBtn.classList.toggle('active', mode === 'json');
+  }
+
+  // ---------- events ----------
+  dropzone.addEventListener('click', () => fileInput.click());
+  dropzone.addEventListener('keydown', (e) => {
+    if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); fileInput.click(); }
+  });
+  dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dragover'); });
+  dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+  dropzone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropzone.classList.remove('dragover');
+    if(e.dataTransfer.files && e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+  });
+  fileInput.addEventListener('change', (e) => {
+    if(e.target.files && e.target.files[0]) handleFile(e.target.files[0]);
+  });
+
+  searchEl.addEventListener('input', applyFilter);
+  loadMoreBtn.addEventListener('click', () => { renderChunk(); updateStats(); });
+  allReadableBtn.addEventListener('click', () => setGlobalMode('readable'));
+  allJsonBtn.addEventListener('click', () => setGlobalMode('json'));
+
+  newFileBtn.addEventListener('click', () => {
+    workspace.classList.add('hidden');
+    dropzone.classList.remove('hidden');
+    errorBox.classList.add('hidden');
+    fileInput.value = '';
+    collections = {}; collectionNames = []; filteredRecords = [];
+    cardsGrid.innerHTML = '';
+  });
+})();
+</script>
+</body>
+</html>
